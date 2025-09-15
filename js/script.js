@@ -1,4 +1,4 @@
-// SFN - Secure Fast Network Scripts
+// SFLN - Secure Fast Locking Network Scripts
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -50,5 +50,5 @@ document.addEventListener('DOMContentLoaded', () => {
         navObserver.observe(section);
     });
 
-    console.log('SFN website interactive features loaded.');
+    console.log('SFLN website interactive features loaded.');
 });
