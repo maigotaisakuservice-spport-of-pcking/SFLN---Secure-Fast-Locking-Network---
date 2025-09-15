@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Download Button Logic ---
     const setupDownloadButtons = () => {
-        const isDevelopment = false; // User requested: `true` for disabled, `false` for enabled
+        const isDevelopment = true; // User requested: `true` for disabled, `false` for enabled
 
         const buttons = [
             { id: 'download-windows', platform: 'Windows', file: 'SFLN-Client-Windows.zip' },
