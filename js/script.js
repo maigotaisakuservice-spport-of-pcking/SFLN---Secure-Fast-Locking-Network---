@@ -50,5 +50,36 @@ document.addEventListener('DOMContentLoaded', () => {
         navObserver.observe(section);
     });
 
+
+    // --- Download Button Logic ---
+    const setupDownloadButtons = () => {
+        const isDevelopment = true; // User requested: `true` for disabled, `false` for enabled
+
+        const buttons = [
+            { id: 'download-windows', platform: 'Windows', file: 'SFLN-Client-Windows.zip' },
+            { id: 'download-android', platform: 'Android', file: 'SFLN-Client-Android.apk' },
+            { id: 'download-linux', platform: 'Linux', file: 'SFLN-Client-Linux.tar.gz' }
+        ];
+
+        buttons.forEach(buttonInfo => {
+            const buttonElement = document.getElementById(buttonInfo.id);
+            if (!buttonElement) return;
+
+            if (isDevelopment) {
+                buttonElement.classList.add('disabled');
+                buttonElement.textContent = `${buttonInfo.platform} (準備中)`;
+                buttonElement.removeAttribute('href');
+                buttonElement.onclick = (e) => e.preventDefault();
+            } else {
+                buttonElement.classList.remove('disabled');
+                buttonElement.textContent = `${buttonInfo.platform} ダウンロード`;
+                buttonElement.setAttribute('href', `downloads/${buttonInfo.file}`);
+                buttonElement.onclick = () => alert(`「${buttonInfo.file}」のダウンロードを開始します...`);
+            }
+        });
+    };
+
+    setupDownloadButtons();
+
     console.log('SFLN website interactive features loaded.');
 });
