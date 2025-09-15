@@ -1,0 +1,223 @@
+/* SFN - Secure Fast Network Stylesheet */
+
+:root {
+    --bg-color: #0d1117;
+    --primary-text-color: #c9d1d9;
+    --secondary-text-color: #8b949e;
+    --accent-color: #58a6ff;
+    --border-color: #30363d;
+    --card-bg-color: #161b22;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--primary-text-color);
+    font-family: "Noto Sans JP", -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+    line-height: 1.6;
+}
+
+.container {
+    width: 90%;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+h1, h2, h3 {
+    color: #f0f6fc;
+    margin-bottom: 0.8em;
+}
+
+h1 { font-size: 3rem; }
+h2 { font-size: 2.2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5em;}
+h3 { font-size: 1.4rem; color: var(--accent-color); }
+
+a {
+    color: var(--accent-color);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+a:hover {
+    color: #79c0ff;
+}
+
+/* Header */
+header {
+    background: rgba(13, 17, 23, 0.8);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+header .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #f0f6fc;
+}
+
+nav ul {
+    list-style: none;
+    display: flex;
+    gap: 1.5rem;
+}
+
+nav a {
+    font-weight: 500;
+    color: var(--primary-text-color);
+}
+
+nav a:hover,
+nav a.active {
+    color: var(--accent-color);
+}
+
+/* Main Content & Sections */
+main {
+    padding: 2rem 0;
+}
+
+section {
+    padding: 4rem 0;
+}
+
+/* Hero Section */
+#hero {
+    text-align: center;
+    padding: 6rem 0;
+}
+
+#hero .subtitle {
+    font-size: 1.2rem;
+    color: var(--secondary-text-color);
+    margin-bottom: 2rem;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.cta-button, .download-button {
+    background-color: var(--accent-color);
+    color: var(--bg-color);
+    padding: 0.8rem 1.8rem;
+    border-radius: 6px;
+    font-weight: bold;
+    display: inline-block;
+    transition: transform 0.2s ease-out, background-color 0.2s;
+}
+
+.cta-button:hover, .download-button:hover {
+    background-color: #79c0ff;
+    transform: translateY(-2px);
+    color: var(--bg-color);
+}
+
+/* About Section */
+#about .performance-goals {
+    display: flex;
+    gap: 2rem;
+    margin-top: 2rem;
+    justify-content: center;
+}
+
+#about .goal {
+    background: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    padding: 1.5rem;
+    border-radius: 8px;
+    text-align: center;
+    flex: 1;
+}
+
+#about .goal p {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #f0f6fc;
+}
+
+/* Features Section */
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.feature-card {
+    background: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 2rem;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(88, 166, 255, 0.1);
+}
+
+.feature-card p {
+    color: var(--secondary-text-color);
+}
+
+/* Download Section */
+#download {
+    text-align: center;
+}
+
+#download .download-links {
+    margin-top: 2rem;
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+}
+
+/* News Section */
+.news-list article {
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem 0;
+}
+
+.news-list time {
+    color: var(--secondary-text-color);
+    margin-right: 1rem;
+}
+
+/* Scroll Animations */
+.fade-in-element {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.fade-in-element.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Footer */
+footer {
+    background: var(--card-bg-color);
+    text-align: center;
+    padding: 2rem 0;
+    margin-top: 2rem;
+    border-top: 1px solid var(--border-color);
+}
