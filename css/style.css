@@ -213,6 +213,18 @@ section {
     transform: translateY(0);
 }
 
+/* Dev Banner */
+.dev-banner {
+    background-color: #4a3c0a;
+    color: #f0e6d2;
+    padding: 1rem 0;
+    text-align: center;
+}
+
+.dev-banner p {
+    margin: 0;
+}
+
 /* Footer */
 footer {
     background: var(--card-bg-color);
