@@ -220,6 +220,19 @@ section {
     transform: translateY(0);
 }
 
+/* Emergency Banner */
+.emergency-banner {
+    background-color: #58111a;
+    color: #f5c6cb;
+    padding: 1rem 0;
+    text-align: center;
+    border-bottom: 1px solid #842029;
+}
+
+.emergency-banner p {
+    margin: 0;
+}
+
 /* Dev Banner */
 .dev-banner {
     background-color: #4a3c0a;
