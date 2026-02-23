@@ -1,0 +1,17 @@
+{
+  "name": "@sfln/library",
+  "version": "1.0.0",
+  "description": "Secure-Fast-Locking-Network Client Library",
+  "main": "sfln.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "sfln",
+    "p2p",
+    "encryption",
+    "mesh-network"
+  ],
+  "author": "SFLN Project",
+  "license": "MIT"
+}
