@@ -74,3 +74,17 @@ await client.connect('ws://your-server-ip:9000');
 ```bash
 python3 sfln/tests/full_test.py
 ```
+
+## 5. デプロイと運用に関する重要事項
+
+### GitHub Actionsでの運用について
+**注意：** GitHub Actions上で本番用のSFLNサーバーを常時稼働させたり、大量の通信（リレー）を行ったりすることは、**GitHubの利用規約(ToS)違反**となる可能性が非常に高いです。
+
+- **Actionsの用途**: 継続的インテリジェンス(CI)としての自動テストに使用してください（`.github/workflows/sfln-ci.yml` を同梱済み）。
+- **推奨されるサーバーホスティング**: 高速な通信を実現するためには、UDPトラフィックが許可されており、帯域制限の緩いVPS（AWS, GCP, DigitalOcean, Hetzner等）での運用を強く推奨します。
+
+### サーバーのデプロイ手順例 (Linux VPS)
+1. サーバー上でリポジトリをクローン。
+2. `sfln/server` 内で依存関係をインストール。
+3. ポート `9000/udp` を開放。
+4. `systemd` を使用してサービス化し、自動起動を設定。
