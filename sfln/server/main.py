@@ -14,12 +14,13 @@ class SFLNServer:
     SFLN High-Performance Backbone Server.
     Supports both JSON control channel and Binary high-speed data relay.
     """
-    def __init__(self, port=9000):
+    def __init__(self, port=9000, log_level=logging.INFO):
         self.port = port
         self.engine = SFLNEngine()
         self.peers = {} # {node_id_bytes: addr}
         self.logger = logging.getLogger("SFLN-Server")
-        logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
+        self.logger.setLevel(log_level)
+        logging.basicConfig(level=log_level, format='%(asctime)s [%(levelname)s] %(message)s')
 
     async def start(self):
         self.logger.info(f"SFLN Professional Server starting on port {self.port}")
@@ -43,6 +44,8 @@ class SFLNServerProtocol(asyncio.DatagramProtocol):
 
     def datagram_received(self, data, addr):
         if not data: return
+        if self.server.logger.isEnabledFor(logging.DEBUG):
+            self.server.logger.debug(f"Datagram from {addr}: {data[:20].hex()}...")
 
         # High-Speed Binary Relay Path
         # Format: [Magic: 'S' (1b)][Type: 0x01 (1b)][TargetID (16b)][Payload]

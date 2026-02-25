@@ -27,3 +27,7 @@ jobs:
         # We set QT_QPA_PLATFORM to offscreen for GUI-related tests in headless CI
         export QT_QPA_PLATFORM=offscreen
         python3 sfln/tests/full_test.py
+
+    - name: Run SFLN Relay Integration Test
+      run: |
+        python3 sfln/tests/integration_test.py

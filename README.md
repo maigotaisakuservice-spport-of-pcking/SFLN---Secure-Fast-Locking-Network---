@@ -71,8 +71,15 @@ await client.connect('ws://your-server-ip:9000');
 
 ## 4. 検証テストの実行
 すべての機能が正しく動作するか確認するには、以下のコマンドを実行してください。
+
+**基本機能テスト (暗号化・認証など):**
 ```bash
 python3 sfln/tests/full_test.py
+```
+
+**統合通信テスト (サーバーを介したリレー通信):**
+```bash
+python3 sfln/tests/integration_test.py
 ```
 
 ## 5. デプロイと運用に関する重要事項
