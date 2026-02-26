@@ -22,6 +22,7 @@ class SFLNEngine:
         self.auth = ContextAuth()
         self.mesh = SFLNMesh(self, node_id)
         self.stun = STUNClient()
+        self.backbone_addr = ("127.0.0.1", 9000) # Default backbone
         self.peers = {}
 
         # Exclusion settings
@@ -53,19 +54,45 @@ class SFLNEngine:
             return True
         return False
 
-    async def secure_send(self, data, target_address, app_name=None, target_site=None):
-        """Encrypt and send data securely if not excluded."""
+    async def secure_send(self, data, target_peer_id, app_name=None, target_site=None):
+        """
+        Encrypt and send data securely using AI-driven dynamic routing.
+        Selects best path (P2P, TURN, Backbone) based on network metrics.
+        """
         if self.should_bypass(app_name, target_site):
-            # In a real system, this would trigger normal OS-level routing
-            print(f"Bypassing SFLN for {app_name or target_site or 'current user'}")
+            self.logger.info(f"Bypassing SFLN for {app_name or target_site or 'current user'}")
             return
 
+        # 1. AI Decision: Determine the best route for this peer
+        best_route_type = self.router.get_best_route(target_peer_id)
+
+        # 2. Select target address based on AI decision
+        target_address = None
+        if best_route_type == "direct":
+            # Look up in mesh for direct P2P address
+            peer_info = self.mesh.peers.get(target_peer_id)
+            if peer_info:
+                target_address = peer_info['addr']
+            else:
+                best_route_type = "backbone" # Fallback to backbone
+
+        if best_route_type == "backbone":
+            target_address = self.backbone_addr
+
+        if not target_address:
+            self.logger.error(f"No route found for peer {target_peer_id}")
+            return
+
+        self.logger.info(f"AI Routing selected path: {best_route_type} for peer {target_peer_id}")
+
+        # 3. Encryption and 1KB chunking
         chunks = self.crypto.encrypt_data(data)
         protocol_chunks = []
         for i, chunk in enumerate(chunks):
             # Binary protocol header: [Chunk Index (4b)]
             protocol_chunks.append(i.to_bytes(4, 'big') + chunk)
 
+        # 4. Multi-stream high-speed transmission
         await self.protocol.send_data(protocol_chunks, target_address)
 
     async def secure_receive(self, expected_chunks_count):

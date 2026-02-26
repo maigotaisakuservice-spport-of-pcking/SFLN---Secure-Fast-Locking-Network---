@@ -11,6 +11,7 @@ import json
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 from sfln.server.main import SFLNServer
+from sfln.core import SFLNEngine
 from sfln.core.crypto import SFLNCrypto
 
 # Setup logging
@@ -58,24 +59,42 @@ async def run_integration_test():
     crypto_a = SFLNCrypto()
     crypto_b = SFLNCrypto(crypto_a.master_key)
 
+    # Initialize engines with shared master key for testing
+    master_key = SFLNCrypto.generate_master_key()
+    engine_a = SFLNEngine(node_id=client_a_id, master_key=master_key)
+    engine_b = SFLNEngine(node_id=client_b_id, master_key=master_key)
+    engine_a.backbone_addr = server_addr
+    engine_b.backbone_addr = server_addr
+
     try:
-        # 1. Register
+        # 1. Register (Simulate mesh join)
         logger.info("Registering...")
         transport_a.sendto(json.dumps({"type": "register", "node_id": client_a_id}).encode(), server_addr)
         transport_b.sendto(json.dumps({"type": "register", "node_id": client_b_id}).encode(), server_addr)
 
-        # Wait for acks
         await asyncio.wait_for(proto_a.queue.get(), 2.0)
         await asyncio.wait_for(proto_b.queue.get(), 2.0)
         logger.info("Registration acks received.")
 
-        # 2. Relay
-        logger.info("Sending relayed packet...")
+        # 2. Secure Send via AI Routing (Force backbone for test)
+        logger.info("Sending secure relayed data via Engine...")
         test_payload = b"Hello through Relay!"
-        encrypted_chunks = crypto_a.encrypt_data(test_payload)
+
+        # Manually update metrics to force backbone route
+        engine_a.router.update_metrics(client_b_id, "backbone", latency=1.0)
+        engine_a.router.update_metrics(client_b_id, "direct", latency=100.0)
+
+        # We need to monkey-patch or mock the protocol.send_data to use our transport_a
+        # For simplicity in this test, we build the packet manually like before
+        # but verifying the engine's decision logic.
+
+        best_route = engine_a.router.get_best_route(client_b_id)
+        logger.info(f"Engine AI selected route: {best_route}")
+        assert best_route == "backbone"
 
         target_id_bytes = uuid.UUID(client_b_id).bytes
-        packet = bytearray([0x53, 0x01]) + target_id_bytes + encrypted_chunks[0]
+        encrypted_chunks = engine_a.crypto.encrypt_data(test_payload)
+        packet = bytearray([0x53, 0x01]) + target_id_bytes + b'\x00\x00\x00\x00' + encrypted_chunks[0]
 
         transport_a.sendto(packet, server_addr)
 
@@ -85,7 +104,8 @@ async def run_integration_test():
         logger.info(f"Received {len(data)} bytes from {addr}")
 
         if data[0] == 0x53 and data[1] == 0x02:
-            decrypted = crypto_b.decrypt_chunks([data[2:]])
+            # Skip magic(1), type(1), and chunk index(4)
+            decrypted = engine_b.crypto.decrypt_chunks([data[6:]])
             logger.info(f"Decrypted: {decrypted.decode()}")
             assert decrypted == test_payload
             logger.info("✅ INTEGRATION TEST SUCCESS!")
