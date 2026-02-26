@@ -91,6 +91,18 @@ python3 sfln/tests/performance_test.py --size 1.0
 python3 sfln/tests/performance_test.py --size 1024.0
 ```
 
+**詳細検証テスト:**
+```bash
+# カオス/AIルーティングテスト
+python3 sfln/tests/chaos_test.py
+
+# サーバー高負荷テスト
+python3 sfln/tests/load_test.py
+
+# JavaScriptライブラリテスト
+node sfln/tests/js_test.js
+```
+
 ## 5. デプロイと運用に関する重要事項
 
 ### GitHub Actionsでの運用について

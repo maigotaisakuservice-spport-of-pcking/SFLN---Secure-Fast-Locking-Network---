@@ -34,9 +34,18 @@ jobs:
 
     - name: Run SFLN Performance Tests (10MB, 100MB, 1GB)
       run: |
-        echo "Running 10MB test..."
         python3 sfln/tests/performance_test.py --size 0.01
-        echo "Running 100MB test..."
         python3 sfln/tests/performance_test.py --size 0.1
-        echo "Running 1GB test..."
         python3 sfln/tests/performance_test.py --size 1.0
+
+    - name: Run SFLN Chaos & AI Routing Tests
+      run: |
+        python3 sfln/tests/chaos_test.py
+
+    - name: Run SFLN Server Load Test
+      run: |
+        python3 sfln/tests/load_test.py
+
+    - name: Run SFLN JavaScript Library Tests
+      run: |
+        node sfln/tests/js_test.js
