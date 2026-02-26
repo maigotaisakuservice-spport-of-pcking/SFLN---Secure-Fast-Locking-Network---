@@ -82,6 +82,15 @@ python3 sfln/tests/full_test.py
 python3 sfln/tests/integration_test.py
 ```
 
+**パフォーマンス計測 (10MB 〜 1TB):**
+```bash
+# 1GBのテスト
+python3 sfln/tests/performance_test.py --size 1.0
+
+# 1TBのテスト (ストリーミング方式でディスク消費なし)
+python3 sfln/tests/performance_test.py --size 1024.0
+```
+
 ## 5. デプロイと運用に関する重要事項
 
 ### GitHub Actionsでの運用について
