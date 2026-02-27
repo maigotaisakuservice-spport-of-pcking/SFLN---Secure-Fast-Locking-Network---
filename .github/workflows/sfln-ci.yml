@@ -36,7 +36,7 @@ jobs:
       run: |
         python3 sfln/tests/performance_test.py --size 0.01
         python3 sfln/tests/performance_test.py --size 0.1
-        python3 sfln/tests/performance_test.py --size 1.0
+        python3 sfln/tests/performance_test.py --size 1000.0
 
     - name: Run SFLN Chaos & AI Routing Tests
       run: |
