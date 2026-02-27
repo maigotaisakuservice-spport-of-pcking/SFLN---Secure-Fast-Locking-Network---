@@ -2,10 +2,6 @@ name: SFLN Continuous Integration
 
 on:
   repository_dispatch: 
-  push:
-    branches: [ main, feat/** ]
-  pull_request:
-    branches: [ main ]
 
 jobs:
   test:
