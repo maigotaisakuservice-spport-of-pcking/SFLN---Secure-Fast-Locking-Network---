@@ -28,7 +28,7 @@ jobs:
       run: |
         python3 sfln/tests/integration_test.py
 
-    - name: Run SFLN Performance Tests (10MB, 100MB, 1GB)
+    - name: Run SFLN Performance Tests (10MB, 100MB, 1000GB)
       run: |
         python3 sfln/tests/performance_test.py --size 0.01
         python3 sfln/tests/performance_test.py --size 0.1
