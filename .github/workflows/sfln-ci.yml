@@ -1,8 +1,7 @@
 name: SFLN Continuous Integration
 
 on:
-  repository_dispatch: 
-
+  workflow_dispatch:
 jobs:
   test:
     runs-on: ubuntu-latest
