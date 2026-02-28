@@ -26,6 +26,16 @@ class SFLNServer:
         self.logger.setLevel(log_level)
         logging.basicConfig(level=log_level, format='%(asctime)s [%(levelname)s] %(message)s')
 
+    async def process_request(self, path, request_headers):
+        """Enable simple HTTP response for certificate approval."""
+        if "Upgrade" not in request_headers.get("Connection", ""):
+            return (
+                websockets.http.HTTPStatus.OK,
+                [("Content-Type", "text/html")],
+                b"<html><body><h1>SFLN Relay Server</h1><p>Certificate accepted. You can now use the demo.</p></body></html>",
+            )
+        return None
+
     async def start(self):
         self.logger.info(f"SFLN Professional Server starting. UDP:{self.port}, WS:{self.ws_port}")
         loop = asyncio.get_running_loop()
@@ -46,7 +56,10 @@ class SFLNServer:
             ssl_context.load_cert_chain(certfile=cert_path, keyfile=key_path)
 
         # Start WebSocket Server
-        async with websockets.serve(self.ws_handler, "0.0.0.0", self.ws_port, ssl=ssl_context):
+        async with websockets.serve(
+            self.ws_handler, "0.0.0.0", self.ws_port, 
+            ssl=ssl_context, process_request=self.process_request
+        ):
             self.logger.info(f"WebSocket Server listening on port {self.ws_port} ({'WSS' if ssl_context else 'WS'})")
             await asyncio.Future()  # run forever
 
