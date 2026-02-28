@@ -1,0 +1,27 @@
+[tool.briefcase]
+project_name = "SFLN Client"
+bundle = "sfln.pdg.client"
+version = "1.0.0"
+url = "https://sfln.pdg.f5.si"
+license = "MIT"
+author = "SFLN Project"
+author_email = "pcdaimaou@gmail.com"
+
+[tool.briefcase.app.sfln]
+formal_name = "SFLN"
+description = "Secure Fast Locking Network Client"
+sources = ["sfln"]
+requires = ["cryptography", "psutil"]
+
+[tool.briefcase.app.sfln.macOS]
+universal_build = true
+requires = ["toga-cocoa~=0.4.0"]
+
+[tool.briefcase.app.sfln.linux]
+requires = ["toga-gtk~=0.4.0"]
+
+[tool.briefcase.app.sfln.windows]
+requires = ["toga-winforms~=0.4.0"]
+
+[tool.briefcase.app.sfln.android]
+requires = ["toga-android~=0.4.0"]
