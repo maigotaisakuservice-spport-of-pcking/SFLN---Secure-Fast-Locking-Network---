@@ -55,6 +55,11 @@ class SFLNServer:
             ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
             ssl_context.load_cert_chain(certfile=cert_path, keyfile=key_path)
 
+        # Cloudflared Quick Tunnel termination
+        # Note: When using cloudflared, the tunnel terminates SSL at the edge, 
+        # so our server receives plain HTTP/WS on port 9001.
+        # We keep the SSL logic for direct local/custom deployments.
+
         # Start WebSocket Server
         async with websockets.serve(
             self.ws_handler, "0.0.0.0", self.ws_port, 
