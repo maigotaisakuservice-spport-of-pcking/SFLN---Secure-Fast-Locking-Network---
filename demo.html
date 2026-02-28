@@ -100,9 +100,12 @@
     <script src="sfln/js-library/sfln.js"></script>
     <script>
         const sfln = new SFLNClientJS();
-        const SERVER_WS = "ws://sfln-server.pdg.f5.si:9001";
+        
+        // Use WSS if current page is HTTPS
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const SERVER_WS = `${protocol}//sfln-server.pdg.f5.si:9001`;
         // Fallback to local if f5.si is not up yet
-        const LOCAL_WS = "ws://" + "sfln-server.pdg.f5.si" + ":9001";
+        const LOCAL_WS = `${protocol}//` + window.location.hostname + ":9001";
 
         let receivedChunks = [];
         let expectedChunks = 0;
@@ -118,9 +121,12 @@
                 document.getElementById('my-id-display').innerText = sfln.nodeId.substring(0,8);
                 refreshPeers();
             } catch (e) {
-                statusDiv.innerText = "❌ サーバーに接続できません。Actionsでサーバーを起動してください。";
-                statusDiv.style.background = "#ffebee";
-                statusDiv.style.color = "#c62828";
+                statusDiv.innerHTML = `❌ サーバーに接続できません。<br>
+                    1. Actionsでサーバーを起動してください。<br>
+                    2. 自己署名証明書を使用しているため、<a href="https://sfln-server.pdg.f5.si:9001" target="_blank" style="color: #ffab91; text-decoration: underline;">ここをクリック</a>して「詳細設定」から「アクセスする」を選択して許可してください。`;
+                statusDiv.style.background = "#421010";
+                statusDiv.style.color = "#ff8a80";
+                statusDiv.style.border = "1px solid #b71c1c";
             }
         }
 
