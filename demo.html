@@ -97,14 +97,21 @@
         </section>
     </main>
 
+    <script src="js/server-config.js"></script>
     <script src="sfln/js-library/sfln.js"></script>
     <script>
         const sfln = new SFLNClientJS();
         
-        // Use WSS if current page is HTTPS
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const SERVER_WS = `${protocol}//sfln-server.pdg.f5.si:9001`;
-        // Fallback to local if f5.si is not up yet
+        const isHttps = window.location.protocol === 'https:';
+        const protocol = isHttps ? 'wss:' : 'ws:';
+        
+        // Discover dynamic tunnel URL from config if available
+        let SERVER_WS = `${protocol}//sfln-server.pdg.f5.si:9001`;
+        if (window.SFLN_CONFIG && window.SFLN_CONFIG.tunnel_url) {
+            SERVER_WS = window.SFLN_CONFIG.tunnel_url.replace('https:', 'wss:').replace('http:', 'ws:');
+        }
+
+        // Fallback to local if everything fails
         const LOCAL_WS = `${protocol}//` + window.location.hostname + ":9001";
 
         let receivedChunks = [];
@@ -113,7 +120,7 @@
         async function init() {
             const statusDiv = document.getElementById('connection-status');
             try {
-                // Try remote first, then local for dev
+                // Try remote first
                 await sfln.connect(SERVER_WS).catch(() => sfln.connect(LOCAL_WS));
                 statusDiv.innerText = "✅ SFLN ネットワークに接続済み (ID: " + sfln.nodeId + ")";
                 statusDiv.style.background = "#e8f5e9";
@@ -122,8 +129,8 @@
                 refreshPeers();
             } catch (e) {
                 statusDiv.innerHTML = `❌ サーバーに接続できません。<br>
-                    1. Actionsでサーバーを起動してください。<br>
-                    2. 自己署名証明書を使用しているため、<a href="https://sfln-server.pdg.f5.si:9001" target="_blank" style="color: #ffab91; text-decoration: underline;">ここをクリック</a>して「詳細設定」から「アクセスする」を選択して許可してください。`;
+                    1. ActionsからSFLN Server Controlを「Run workflow」で起動してください。<br>
+                    2. 起動後、1分ほど待ってからこのページを再読み込みしてください。`;
                 statusDiv.style.background = "#421010";
                 statusDiv.style.color = "#ff8a80";
                 statusDiv.style.border = "1px solid #b71c1c";
