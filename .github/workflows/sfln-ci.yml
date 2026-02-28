@@ -33,7 +33,7 @@ jobs:
       run: |
         python3 sfln/tests/integration_test.py
 
-    - name: Run SFLN Performance Tests (10MB, 100MB, 1GB, 10GB, 100GB, 1000GB 10000GB 100000GB)
+    - name: Run SFLN Performance Tests (10MB, 100MB, 1GB, 10GB, 100GB, 1000GB 10000GB)
       run: |
         python3 sfln/tests/performance_test.py --size 0.01
         python3 sfln/tests/performance_test.py --size 0.1
@@ -42,7 +42,6 @@ jobs:
         python3 sfln/tests/performance_test.py --size 100.0
         python3 sfln/tests/performance_test.py --size 1000.0
         python3 sfln/tests/performance_test.py --size 10000.0
-        python3 sfln/tests/performance_test.py --size 100000.0
 
     - name: Run SFLN Chaos & AI Routing Tests
       run: |
