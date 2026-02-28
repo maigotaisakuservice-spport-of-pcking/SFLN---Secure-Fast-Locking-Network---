@@ -19,20 +19,47 @@ jobs:
         python -m pip install --upgrade pip
         pip install cryptography websockets
 
-    - name: Update f5.si IP Address
+    - name: Install Cloudflared
       run: |
-        curl -s "https://f5.si/update.php?domain=sfln-server.pdg.f5.si&password=2d4a704921a716d36bd7dfa3a3d8d74e"
+        wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+        sudo dpkg -i cloudflared-linux-amd64.deb
 
-    - name: Generate SSL Certificate for WSS
-      run: |
-        openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -sha256 -days 365 -nodes -subj "/C=JP/ST=Tokyo/L=SFLN/O=SFLN/OU=SFLN/CN=sfln-server.pdg.f5.si"
-
-    - name: Start SFLN Server
+    - name: Start SFLN Server and Cloudflared Tunnel
       run: |
         echo "Starting SFLN Server (UDP:9000, WS:9001)..."
         python3 sfln/server/main.py &
         SERVER_PID=$!
-        echo "Server running with PID $SERVER_PID. It will auto-stop in 1 hour."
+
+        echo "Starting Cloudflared Quick Tunnel for WS port 9001..."
+        cloudflared tunnel --url http://localhost:9001 > tunnel.log 2>&1 &
+        CLOUDFLARED_PID=$!
+        
+        # Give it a few seconds to establish the tunnel
+        sleep 10
+        
+        # Extract the tunnel URL (e.g., https://something.trycloudflare.com)
+        TUNNEL_URL=$(grep -o 'https://[-0-9a-z]*\.trycloudflare\.com' tunnel.log | head -n 1)
+        echo "Tunnel established at: $TUNNEL_URL"
+        
+        if [ -n "$TUNNEL_URL" ]; then
+          # Extract hostname only (without https://)
+          TUNNEL_HOST=$(echo $TUNNEL_URL | sed 's|https://||')
+          
+          # 1. Update f5.si with CNAME record
+          curl -s "https://f5.si/update.php?domain=sfln-server.pdg.f5.si&password=2d4a704921a716d36bd7dfa3a3d8d74e&CNAME=$TUNNEL_HOST"
+          
+          # 2. Update server-config.js for demo.html
+          echo "window.SFLN_CONFIG = { tunnel_url: '$TUNNEL_URL' };" > js/server-config.js
+          
+          git config --global user.name "SFLN Server Bot"
+          git config --global user.email "actions@github.com"
+          git add js/server-config.js
+          git commit -m "Server Start: Update tunnel URL to $TUNNEL_URL" || echo "No changes to commit"
+          git push
+        fi
+
+        echo "Server and Tunnel running. They will auto-stop in 1 hour."
         sleep 3600
         kill $SERVER_PID
+        kill $CLOUDFLARED_PID
         echo "Server stopped."
