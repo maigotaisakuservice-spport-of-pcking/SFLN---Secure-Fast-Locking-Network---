@@ -1,17 +1,19 @@
 [tool.briefcase]
 project_name = "SFLN Client"
-bundle = "sfln.pdg.client"
+bundle = "pdg.sfln.client"
 version = "1.0.0"
 url = "https://sfln.pdg.f5.si"
 license = "MIT"
 author = "SFLN Project"
-author_email = "pcdaimaou@gmail.com"
+author_email = "none"
 
 [tool.briefcase.app.sfln]
 formal_name = "SFLN"
 description = "Secure Fast Locking Network Client"
 sources = ["sfln"]
 requires = ["cryptography", "psutil"]
+# Ensure sfln.client.gui is the entry point
+console_app = false
 
 [tool.briefcase.app.sfln.macOS]
 universal_build = true
