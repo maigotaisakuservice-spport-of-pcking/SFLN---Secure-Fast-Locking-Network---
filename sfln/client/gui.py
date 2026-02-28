@@ -7,8 +7,11 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QTabWidget, QLineEdit, QFormLayout)
 from PySide6.QtCore import Qt, QTimer
 
-# Add core to path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+# Add project root to path for local execution and PyInstaller
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
 from sfln.core import SFLNEngine
 
 class SFLNClientGUI(QMainWindow):
