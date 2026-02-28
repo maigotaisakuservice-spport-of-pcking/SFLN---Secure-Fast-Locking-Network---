@@ -85,18 +85,77 @@ class SFLNClientJS {
     constructor(masterKey = null) {
         this.crypto = new SFLNCryptoJS(masterKey);
         this.nodeId = crypto.randomUUID();
-        this.peers = new Set();
+        this.peers = [];
+        this.ws = null;
+        this.onMessage = null;
     }
 
     async connect(serverUrl) {
-        console.log(`[SFLN] Connecting as ${this.nodeId} to ${serverUrl}`);
-        // Real implementation would establish a WebSocket or WebTransport
-        // and perform the registration handshake.
+        return new Promise((resolve, reject) => {
+            console.log(`[SFLN] Connecting as ${this.nodeId} to ${serverUrl}`);
+            this.ws = new WebSocket(serverUrl);
+            this.ws.binaryType = 'arraybuffer';
+
+            this.ws.onopen = () => {
+                this.ws.send(JSON.stringify({
+                    type: "register",
+                    node_id: this.nodeId
+                }));
+            };
+
+            this.ws.onmessage = async (event) => {
+                if (typeof event.data === 'string') {
+                    const msg = JSON.parse(event.data);
+                    if (msg.type === "reg_ack") {
+                        console.log("[SFLN] Registered successfully");
+                        resolve();
+                    } else if (msg.type === "peers") {
+                        this.peers = msg.list.filter(id => id !== this.nodeId);
+                    }
+                } else {
+                    // Binary relay: [Magic][Type][Payload]
+                    const data = new Uint8Array(event.data);
+                    if (data[0] === 0x53 && data[1] === 0x02) {
+                        const payload = data.slice(2);
+                        if (this.onMessage) this.onMessage(payload);
+                    }
+                }
+            };
+
+            this.ws.onerror = (err) => reject(err);
+        });
+    }
+
+    async refreshPeers() {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({ type: "get_peers" }));
+        }
     }
 
     async send(data, targetId) {
-        console.log(`[SFLN] Sending ${data.length} bytes to ${targetId}`);
-        return await this.crypto.encryptData(data);
+        console.log(`[SFLN] Encrypting and sending to ${targetId}`);
+        const chunks = await this.crypto.encryptData(data);
+        
+        // Protocol format for relay: [Magic: 'S'][Type: 0x01][TargetID: 16b][Payload]
+        const targetUUIDBytes = this.uuidToBytes(targetId);
+        
+        for (const chunk of chunks) {
+            const packet = new Uint8Array(2 + 16 + chunk.length);
+            packet[0] = 0x53;
+            packet[1] = 0x01;
+            packet.set(targetUUIDBytes, 2);
+            packet.set(chunk, 18);
+            this.ws.send(packet);
+        }
+    }
+
+    uuidToBytes(uuid) {
+        const hex = uuid.replace(/-/g, '');
+        const bytes = new Uint8Array(16);
+        for (let i = 0; i < 16; i++) {
+            bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+        }
+        return bytes;
     }
 }
 
