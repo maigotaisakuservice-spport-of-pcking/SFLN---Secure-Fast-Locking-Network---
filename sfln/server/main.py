@@ -5,6 +5,7 @@ import os
 import json
 import uuid
 import websockets
+import ssl
 
 # Add parent directory
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
@@ -35,9 +36,18 @@ class SFLNServer:
             local_addr=('0.0.0.0', self.port)
         )
 
+        # Setup SSL for Secure WebSockets if cert files exist
+        ssl_context = None
+        cert_path = "cert.pem"
+        key_path = "key.pem"
+        if os.path.exists(cert_path) and os.path.exists(key_path):
+            self.logger.info("SSL Certificate found. Enabling WSS (Secure WebSockets).")
+            ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            ssl_context.load_cert_chain(certfile=cert_path, keyfile=key_path)
+
         # Start WebSocket Server
-        async with websockets.serve(self.ws_handler, "0.0.0.0", self.ws_port):
-            self.logger.info(f"WebSocket Server listening on port {self.ws_port}")
+        async with websockets.serve(self.ws_handler, "0.0.0.0", self.ws_port, ssl=ssl_context):
+            self.logger.info(f"WebSocket Server listening on port {self.ws_port} ({'WSS' if ssl_context else 'WS'})")
             await asyncio.Future()  # run forever
 
     async def ws_handler(self, websocket):
