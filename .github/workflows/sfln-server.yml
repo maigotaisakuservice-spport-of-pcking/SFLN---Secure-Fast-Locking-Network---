@@ -23,6 +23,10 @@ jobs:
       run: |
         curl -s "https://f5.si/update.php?domain=sfln-server.pdg.f5.si&password=2d4a704921a716d36bd7dfa3a3d8d74e"
 
+    - name: Generate SSL Certificate for WSS
+      run: |
+        openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -sha256 -days 365 -nodes -subj "/C=JP/ST=Tokyo/L=SFLN/O=SFLN/OU=SFLN/CN=sfln-server.pdg.f5.si"
+
     - name: Start SFLN Server
       run: |
         echo "Starting SFLN Server (UDP:9000, WS:9001)..."
