@@ -18,6 +18,7 @@
         .btn { display: inline-block; padding: 10px 20px; background: var(--accent-color); color: var(--bg-color); text-decoration: none; border-radius: 4px; border: none; cursor: pointer; font-size: 16px; width: 100%; font-weight: bold; transition: opacity 0.2s; text-align: center; }
         .btn:hover:not(:disabled) { opacity: 0.9; }
         .btn:disabled { background: var(--border-color); color: var(--secondary-text-color); cursor: not-allowed; }
+        .btn-outline { background: transparent; border: 1px solid var(--accent-color); color: var(--accent-color); margin-top: 10px; }
         #status-area { margin-top: 20px; padding: 15px; border-radius: 4px; background: #1c2128; border: 1px solid var(--border-color); }
         input[type="text"] { background: #0d1117; border: 1px solid var(--border-color); color: var(--primary-text-color); padding: 12px; border-radius: 4px; width: 100%; box-sizing: border-box; font-family: monospace; }
         code { background: #2d333b; padding: 2px 6px; border-radius: 4px; font-family: monospace; color: var(--accent-color); word-break: break-all; }
@@ -25,6 +26,7 @@
         .server-status { padding: 8px; border-radius: 4px; font-size: 0.8rem; margin-bottom: 10px; }
         .status-online { background: #1b4332; color: #74c69d; }
         .status-offline { background: #431b1b; color: #c67474; }
+        .error-hint { background: #3e2723; color: #ffab91; padding: 15px; border-radius: 4px; margin-top: 10px; display: none; font-size: 0.85rem; border: 1px solid #d84315; }
     </style>
 </head>
 <body>
@@ -45,16 +47,21 @@
 
         <div id="server-status" class="server-status status-offline">サーバー接続中...</div>
 
+        <div id="cert-error-hint" class="error-hint">
+            <strong>⚠️ 接続エラー (証明書が無効)</strong><br>
+            ブラウザが一時的なトンネルURLの証明書を信頼していません。<br>
+            1. <a id="https-link" href="#" target="_blank" style="text-decoration: underline; color: #ffccbc;">ここをクリックしてサーバーURLを直接開く</a><br>
+            2. 「詳細設定」をクリックし、<strong>「アクセスする（安全ではありません）」</strong>を選択してください。<br>
+            3. その後、このページに戻って以下の「再接続」を押してください。
+        </div>
+
         <section style="padding: 0;">
             <div style="margin-bottom: 15px;">
-                <label style="font-size: 0.8rem; color: var(--secondary-text-color);">リレーサーバーURL:</label>
+                <label style="font-size: 0.8rem; color: var(--secondary-text-color);">リレーサーバーURL (自動設定済):</label>
                 <div style="display: flex; gap: 5px;">
                     <input type="text" id="server-url-input" placeholder="wss://..." style="flex: 1; padding: 8px;">
                     <button class="btn" style="width: auto; padding: 8px 15px;" onclick="reconnect()">再接続</button>
                 </div>
-                <p style="font-size: 0.7rem; color: var(--secondary-text-color); margin-top: 4px;">
-                    ※SSLエラーが出る場合は https を wss に変えるか、一時URL (trycloudflare.com) を直接入力してください。
-                </p>
             </div>
 
             <h3 style="margin-bottom: 1rem;">1. 通信モードの選択</h3>
@@ -77,6 +84,7 @@
                     <div style="width: 100%; border-top: 1px solid var(--border-color); margin-top: 10px; padding-top: 20px;">
                         <input type="text" id="target-id" placeholder="相手のノードIDを入力" style="margin-bottom: 10px;">
                         <button class="btn" onclick="connectToTarget()">ペアリング設定</button>
+                        <button class="btn btn-outline" onclick="copyInviteLink()">招待URLをコピー</button>
                     </div>
                 </div>
             </div>
@@ -100,7 +108,6 @@
             <div id="transfer-view" style="display: none;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 0.9rem;">
                     <span id="label-source">元: <strong>...</strong></span>
-                    <span id="ai-path-label" style="background: #1f2937; padding: 2px 10px; border-radius: 12px; font-size: 0.8em; color: var(--accent-color); border: 1px solid var(--accent-color);">AI: 経路解析中...</span>
                     <span id="label-target">先: <strong>...</strong></span>
                 </div>
                 <div style="height: 12px; background: #21262d; border-radius: 6px; overflow: hidden; margin-bottom: 10px;">
@@ -146,13 +153,26 @@
                 correctLevel : QRCode.CorrectLevel.H
             });
 
-            // Set initial URL
-            const urlInput = document.getElementById('server-url-input');
-            if (typeof SFLN_SERVER_CONFIG !== 'undefined' && SFLN_SERVER_CONFIG.url) {
-                urlInput.value = SFLN_SERVER_CONFIG.url;
-            } else {
-                urlInput.value = defaultServerUrl;
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetParam = urlParams.get('pair');
+            if (targetParam) {
+                document.getElementById('target-id').value = targetParam;
+                setMode('remote');
             }
+
+            const urlInput = document.getElementById('server-url-input');
+            let initialUrl = defaultServerUrl;
+
+            if (typeof SFLN_SERVER_CONFIG !== 'undefined') {
+                // Priority: Tunnel (Direct) > CNAME (Custom Domain)
+                initialUrl = SFLN_SERVER_CONFIG.tunnel || SFLN_SERVER_CONFIG.cname || defaultServerUrl;
+                if (SFLN_SERVER_CONFIG.https_tunnel) {
+                    document.getElementById('https-link').href = SFLN_SERVER_CONFIG.https_tunnel;
+                } else {
+                    document.getElementById('https-link').href = "https://sfln-server.pdg.f5.si";
+                }
+            }
+            urlInput.value = initialUrl;
 
             await reconnect();
 
@@ -164,7 +184,7 @@
             };
 
             client.onMessage = (data, senderId) => {
-                log(`🔐 ${senderId.substring(0,8)}... から受信・復号しました！`);
+                log(`🔐 ${senderId.substring(0,8)}... から受信・復号完了！`);
                 const blob = new Blob([data]);
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -178,27 +198,26 @@
         async function reconnect() {
             const url = document.getElementById('server-url-input').value.trim();
             const statusEl = document.getElementById('server-status');
+            const hintEl = document.getElementById('cert-error-hint');
             const sendBtn = document.getElementById('send-btn');
 
             statusEl.innerText = "サーバー接続中...";
             statusEl.className = "server-status status-offline";
+            hintEl.style.display = "none";
             sendBtn.disabled = true;
 
-            log(`サーバーに接続を試行中: ${url}`);
+            log(`サーバーに接続試行: ${url}`);
 
             try {
                 await client.connect(url);
-                log("✅ リレーサーバーに接続しました。");
+                log("✅ リレーサーバーに接続成功！");
                 statusEl.innerText = "サーバー稼働中 (" + new URL(url).hostname + ")";
                 statusEl.className = "server-status status-online";
                 sendBtn.disabled = false;
             } catch (e) {
                 log("❌ 接続エラー: " + e.message);
-                if (e.message.includes("SSL")) {
-                    log("SSL証明書のエラーです。サーバーのURLを直接開き、証明書を許可してください。");
-                }
-                statusEl.innerText = "サーバーオフライン";
-                sendBtn.disabled = false; // Allow local simulation
+                hintEl.style.display = "block";
+                sendBtn.disabled = false;
             }
         }
 
@@ -213,8 +232,15 @@
         function connectToTarget() {
             const targetId = document.getElementById('target-id').value.trim();
             if (!targetId || targetId.length < 10) return alert("ノードIDを入力してください");
-            log(`ペアリング: ${targetId}`);
+            log(`ペアリング設定完了: ${targetId}`);
             document.getElementById('label-target').innerHTML = `先: <strong>${targetId.substring(0,8)}...</strong>`;
+        }
+
+        function copyInviteLink() {
+            const url = new URL(window.location.href);
+            url.searchParams.set('pair', client.nodeId);
+            navigator.clipboard.writeText(url.toString());
+            alert("招待URLをコピーしました！");
         }
 
         async function handleFileSelect(event) {
@@ -227,7 +253,7 @@
             const reader = new FileReader();
             reader.onload = async (e) => {
                 try {
-                    log(`${file.name} を暗号化送信中...`);
+                    log(`${file.name} を送信中...`);
                     await client.send(new Uint8Array(e.target.result), targetId);
                     log("送信完了！");
                 } catch (err) { log("エラー: " + err.message); }
