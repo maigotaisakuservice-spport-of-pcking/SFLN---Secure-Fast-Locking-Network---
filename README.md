@@ -6,12 +6,16 @@ SFLNサービス、サーバー、およびクライアントのセットアッ�
 
 GitHub Actions を使用して、自分専用の一時的なリレーサーバーを即座に起動し、遠隔地との暗号化通信をテストできます。
 
-1.  **サーバーの起動**:
+1.  **GitHub Secrets の設定**:
+    リポジトリの `Settings > Secrets and variables > Actions` にて、以下のシークレットを登録してください。
+    - **Name**: `F5_SI_API_TOKEN`
+    - **Secret**: `2d4a704921a716d36bd7dfa3a3d8d74e` (ご提示いただいたキー)
+2.  **サーバーの起動**:
     GitHub リポジトリの `Actions` タブから `SFLN Server & Dynamic DNS Update` を選択し、`Run workflow` をクリックします。
     - これにより、`sfln-server.pdg.f5.si` が自動的に起動したサーバーに紐付けられます。
-2.  **デモページにアクセス**:
+3.  **デモページにアクセス**:
     ブラウザで `demo.html` を開きます。
-3.  **ペアリングと送信**:
+4.  **ペアリングと送信**:
     - Aさんが「リモートテスト」を選択し、表示されたQRコードまたはIDをBさんに伝えます。
     - BさんがそのIDを入力して「ペアリング」し、ファイルを送信します。
     - 12,000桁の暗号化を施されたデータが、世界中のどこからでも安全にリレーされます。
@@ -35,8 +39,8 @@ GitHub Actions を使用して、自分専用の一時的なリレーサーバ�
   await client.connect('wss://sfln-server.pdg.f5.si');
 
   // データ受信時の処理
-  client.onMessage = (data) => {
-    console.log("安全に受信・復号されたデータ:", data);
+  client.onMessage = (data, senderId) => {
+    console.log(`${senderId} から安全に受信・復号されたデータ:`, data);
   };
 
   // 相手のノードIDを指定してデータを送信 (自動で12,000桁暗号化)
