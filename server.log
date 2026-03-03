@@ -1,0 +1,4 @@
+2026-03-03 00:23:48,519 [INFO] SFLN Professional Server starting...
+2026-03-03 00:23:48,519 [INFO] UDP Relay on port 9000
+2026-03-03 00:23:48,519 [INFO] WebSocket Relay on port 9001
+2026-03-03 00:23:48,552 [INFO] server listening on 0.0.0.0:9001

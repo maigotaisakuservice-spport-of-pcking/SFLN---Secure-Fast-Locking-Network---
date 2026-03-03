@@ -16,7 +16,6 @@ class SFLNCryptoJS {
     }
 
     async deriveChunkKey(chunkIndex, chunkSeed) {
-        // Simplified HKDF using SHA-256
         const encoder = new TextEncoder();
         const info = encoder.encode(chunkIndex.toString());
 
@@ -50,24 +49,33 @@ class SFLNCryptoJS {
             finalChunk.set(chunkSeed, 12);
             finalChunk.set(encryptedPayload, 12 + this.KEY_EMBED_SIZE);
 
-            encryptedChunks.push(finalChunk);
+            encryptedChunks.push({ index: idx, data: finalChunk });
         }
         return encryptedChunks;
+    }
+
+    async decryptChunk(chunkData, index) {
+        const nonce = chunkData.slice(0, 12);
+        const chunkSeed = chunkData.slice(12, 12 + this.KEY_EMBED_SIZE);
+        const encryptedPayload = chunkData.slice(12 + this.KEY_EMBED_SIZE);
+
+        const key = await this.deriveChunkKey(index, chunkSeed);
+        const decryptedBuffer = await crypto.subtle.decrypt(
+            { name: 'AES-GCM', iv: nonce }, key, encryptedPayload
+        );
+        return new Uint8Array(decryptedBuffer);
     }
 
     async decryptChunks(chunks) {
         let decryptedParts = [];
         for (let i = 0; i < chunks.length; i++) {
-            const chunk = chunks[i];
-            const nonce = chunk.slice(0, 12);
-            const chunkSeed = chunk.slice(12, 12 + this.KEY_EMBED_SIZE);
-            const encryptedPayload = chunk.slice(12 + this.KEY_EMBED_SIZE);
+            // Support both old array of data and new array of {index, data} objects
+            const chunkObj = chunks[i];
+            const data = (chunkObj instanceof Uint8Array) ? chunkObj : chunkObj.data;
+            const idx = (chunkObj instanceof Uint8Array) ? i : chunkObj.index;
 
-            const key = await this.deriveChunkKey(i, chunkSeed);
-            const decryptedBuffer = await crypto.subtle.decrypt(
-                { name: 'AES-GCM', iv: nonce }, key, encryptedPayload
-            );
-            decryptedParts.push(new Uint8Array(decryptedBuffer));
+            const decrypted = await this.decryptChunk(data, idx);
+            decryptedParts.push(decrypted);
         }
 
         const totalLength = decryptedParts.reduce((acc, p) => acc + p.length, 0);
@@ -82,21 +90,89 @@ class SFLNCryptoJS {
 }
 
 class SFLNClientJS {
-    constructor(masterKey = null) {
+    constructor(masterKey = null, nodeId = null) {
         this.crypto = new SFLNCryptoJS(masterKey);
-        this.nodeId = crypto.randomUUID();
-        this.peers = new Set();
+        this.nodeId = nodeId || crypto.randomUUID();
+        this.ws = null;
+        this.onMessage = null;
+        this.onProgress = null;
+        this.onReady = null;
+        this.activeTransfers = new Map();
     }
 
     async connect(serverUrl) {
-        console.log(`[SFLN] Connecting as ${this.nodeId} to ${serverUrl}`);
-        // Real implementation would establish a WebSocket or WebTransport
-        // and perform the registration handshake.
+        return new Promise((resolve, reject) => {
+            this.ws = new WebSocket(serverUrl);
+            this.ws.binaryType = 'arraybuffer';
+            this.ws.onopen = () => {
+                this.ws.send(JSON.stringify({ type: "register", node_id: this.nodeId }));
+            };
+            this.ws.onmessage = async (event) => {
+                if (typeof event.data === 'string') {
+                    const msg = JSON.parse(event.data);
+                    if (msg.type === 'reg_ack' && resolve) {
+                        resolve();
+                        if (this.onReady) this.onReady();
+                    }
+                } else {
+                    const data = new Uint8Array(event.data);
+                    if (data[0] === 0x53 && data[1] === 0x02) {
+                        const sourceId = this.bytesToUuid(data.slice(2, 18));
+                        const totalChunks = new DataView(data.buffer, 18, 4).getUint32(0);
+                        const chunkIdx = new DataView(data.buffer, 22, 4).getUint32(0);
+                        const encryptedData = data.slice(26);
+                        this.handleReceivedChunk(sourceId, chunkIdx, totalChunks, encryptedData);
+                    }
+                }
+            };
+            this.ws.onerror = (err) => reject(err);
+        });
+    }
+
+    async handleReceivedChunk(senderId, index, total, encryptedData) {
+        if (!this.activeTransfers.has(senderId)) {
+            this.activeTransfers.set(senderId, { chunks: new Map(), total: total });
+        }
+        const transfer = this.activeTransfers.get(senderId);
+        const decrypted = await this.crypto.decryptChunk(encryptedData, index);
+        transfer.chunks.set(index, decrypted);
+        if (this.onProgress) this.onProgress(transfer.chunks.size, total);
+        if (transfer.chunks.size === total) {
+            const sortedParts = Array.from(transfer.chunks.entries()).sort((a,b) => a[0]-b[0]).map(x => x[1]);
+            const totalLen = sortedParts.reduce((a,b) => a + b.length, 0);
+            const fullData = new Uint8Array(totalLen);
+            let offset = 0;
+            for (const p of sortedParts) { fullData.set(p, offset); offset += p.length; }
+            if (this.onMessage) this.onMessage(fullData, senderId);
+            this.activeTransfers.delete(senderId);
+        }
     }
 
     async send(data, targetId) {
-        console.log(`[SFLN] Sending ${data.length} bytes to ${targetId}`);
-        return await this.crypto.encryptData(data);
+        const encryptedChunks = await this.crypto.encryptData(data);
+        const targetUUID = this.uuidToBytes(targetId);
+        const total = encryptedChunks.length;
+        for (const chunk of encryptedChunks) {
+            const packet = new Uint8Array(2 + 16 + 4 + 4 + chunk.data.length);
+            packet[0] = 0x53; packet[1] = 0x01;
+            packet.set(targetUUID, 2);
+            new DataView(packet.buffer).setUint32(18, total);
+            new DataView(packet.buffer).setUint32(22, chunk.index);
+            packet.set(chunk.data, 26);
+            this.ws.send(packet);
+        }
+    }
+
+    uuidToBytes(uuidStr) {
+        const hex = uuidStr.replace(/-/g, '');
+        const bytes = new Uint8Array(16);
+        for (let i = 0; i < 16; i++) bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+        return bytes;
+    }
+
+    bytesToUuid(bytes) {
+        const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+        return `${hex.substr(0,8)}-${hex.substr(8,4)}-${hex.substr(12,4)}-${hex.substr(16,4)}-${hex.substr(20)}`;
     }
 }
 

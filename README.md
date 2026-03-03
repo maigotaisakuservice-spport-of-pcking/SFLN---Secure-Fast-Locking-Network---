@@ -2,117 +2,90 @@
 
 SFLNサービス、サーバー、およびクライアントのセットアップ方法について説明します。
 
-## 1. サーバーのセットアップ (Ubuntu/Linux推奨)
+## 🚀 クイックスタート (デモ)
 
-サーバーは、クライアント間の通信を中継し、メッシュネットワークを調整する役割を果たします。
+GitHub Actions を使用して、自分専用の一時的なリレーサーバーを即座に起動し、遠隔地との暗号化通信をテストできます。
 
-### 手順:
+1.  **サーバーの起動**:
+    GitHub リポジトリの `Actions` タブから `SFLN Server & Dynamic DNS Update` を選択し、`Run workflow` をクリックします。
+    - これにより、`sfln-server.pdg.f5.si` が自動的に起動したサーバーに紐付けられます。
+2.  **デモページにアクセス**:
+    ブラウザで `demo.html` を開きます。
+3.  **ペアリングと送信**:
+    - Aさんが「リモートテスト」を選択し、表示されたQRコードまたはIDをBさんに伝えます。
+    - BさんがそのIDを入力して「ペアリング」し、ファイルを送信します。
+    - 12,000桁の暗号化を施されたデータが、世界中のどこからでも安全にリレーされます。
+
+---
+
+## 🛠️ 開発者向け導入ガイド
+
+### Webサイト・アプリへの導入 (JavaScript)
+
+わずか数行で、既存のWebサイトに最強の暗号化通信を追加できます。
+
+```html
+<!-- ライブラリの読み込み -->
+<script src="sfln/js-library/sfln.js"></script>
+
+<script>
+  const client = new SFLNClientJS();
+
+  // サーバーに接続 (デフォルトのリレーサーバーを使用)
+  await client.connect('wss://sfln-server.pdg.f5.si');
+
+  // データ受信時の処理
+  client.onMessage = (data) => {
+    console.log("安全に受信・復号されたデータ:", data);
+  };
+
+  // 相手のノードIDを指定してデータを送信 (自動で12,000桁暗号化)
+  await client.send(new Uint8Array([1, 2, 3]), "TARGET_NODE_ID");
+</script>
+```
+
+### サーバーのセットアップ (Python/Docker)
+
+自前のリレーサーバーを構築する場合の手順です。
+
 1.  **依存関係のインストール**:
     ```bash
-    cd sfln/server
-    pip install -r requirements.txt
+    pip install -r sfln/server/requirements.txt
     ```
 
 2.  **サーバーの起動**:
-    デフォルトでポート `9000` (UDP) を使用します。ファイアウォールでこのポートを開放してください。
+    UDP (9000) と WebSocket (9001) の両方で待ち受けを開始します。
     ```bash
-    python3 main.py
+    python3 sfln/server/main.py
     ```
-    ※ 本番環境では、`systemd` 等を使用してバックグラウンドで実行することを推奨します。
 
 ---
 
-## 2. クライアント(GUI)のセットアップ (Windows/Linux)
+## 🧪 テストと検証
 
-### 手順:
-1.  **依存関係のインストール**:
-    ```bash
-    cd sfln/client
-    pip install -r requirements.txt
-    ```
+### 継続的インテグレーション (CI)
+`.github/workflows/sfln-ci.yml` が同梱されており、`push` ごとに以下のテストが自動実行されます：
+- Python コア機能テスト
+- WebSocket 統合リレーテスト
+- JavaScript / NPM ライブラリ互換性テスト
 
-2.  **クライアントの起動**:
-    ```bash
-    python3 gui.py
-    ```
-
-### 使い方:
-- **Dashboard**: 「ENABLE SFLN」をクリックして接続を開始します。
-- **Excluded Apps**: 除外したいアプリを選択し、右下の「Refresh」で反映させます。
-- **Excluded Sites**: 除外したいドメイン（google.comなど）を入力して「Add」します。
-- **Excluded Users**: SFLNを適用したくないシステムユーザーを選択します。
-
----
-
-## 3. ライブラリの使用方法
-
-### Python SDK:
-```python
-from sfln.python_library.sdk import SFLNSDK
-import asyncio
-
-async def main():
-    sdk = SFLNSDK()
-    # サーバーのアドレスを指定して接続
-    await sdk.connect([("your-server-ip", 9000)])
-    await sdk.send(b"Hello SFLN", ("target-node-id", 0))
-
-asyncio.run(main())
-```
-
-### JavaScript / npm:
-```javascript
-const { SFLNClientJS } = require('./sfln.js');
-const client = new SFLNClientJS();
-await client.connect('ws://your-server-ip:9000');
-```
-
----
-
-## 4. 検証テストの実行
-すべての機能が正しく動作するか確認するには、以下のコマンドを実行してください。
-
-**基本機能テスト (暗号化・認証など):**
+### 手動テスト
 ```bash
+# 全機能統合テスト
 python3 sfln/tests/full_test.py
-```
 
-**統合通信テスト (サーバーを介したリレー通信):**
-```bash
-python3 sfln/tests/integration_test.py
-```
-
-**パフォーマンス計測 (10MB 〜 1TB):**
-```bash
-# 1GBのテスト
-python3 sfln/tests/performance_test.py --size 1.0
-
-# 1TBのテスト (ストリーミング方式でディスク消費なし)
-python3 sfln/tests/performance_test.py --size 1024.0
-```
-
-**詳細検証テスト:**
-```bash
-# カオス/AIルーティングテスト
-python3 sfln/tests/chaos_test.py
-
-# サーバー高負荷テスト
-python3 sfln/tests/load_test.py
-
-# JavaScriptライブラリテスト
+# JSライブラリテスト (Node.js)
 node sfln/tests/js_test.js
 ```
 
-## 5. デプロイと運用に関する重要事項
+---
 
-### GitHub Actionsでの運用について
-**注意：** GitHub Actions上で本番用のSFLNサーバーを常時稼働させたり、大量の通信（リレー）を行ったりすることは、**GitHubの利用規約(ToS)違反**となる可能性が非常に高いです。
+## 📝 運用に関する重要事項
 
-- **Actionsの用途**: 継続的インテリジェンス(CI)としての自動テストに使用してください（`.github/workflows/sfln-ci.yml` を同梱済み）。
-- **推奨されるサーバーホスティング**: 高速な通信を実現するためには、UDPトラフィックが許可されており、帯域制限の緩いVPS（AWS, GCP, DigitalOcean, Hetzner等）での運用を強く推奨します。
+### GitHub Actionsでの運用
+同梱の `sfln-server.yml` は**テストおよびデモ目的**のものです。
+- Cloudflare Tunnel を使用して外部公開し、`f5.si` DDNS を自動更新します。
+- 長時間の運用や商用利用には、VPS（AWS, GCP等）へのデプロイを推奨します。
 
-### サーバーのデプロイ手順例 (Linux VPS)
-1. サーバー上でリポジトリをクローン。
-2. `sfln/server` 内で依存関係をインストール。
-3. ポート `9000/udp` を開放。
-4. `systemd` を使用してサービス化し、自動起動を設定。
+### セキュリティ
+SFLNは、12,000桁のマスターキーから派生した一時的な鍵を使用し、AES-GCM 1KB チャンク単位で暗号化を行います。これにより、量子コンピュータでも解読が困難なレベルの安全性を目指しています。

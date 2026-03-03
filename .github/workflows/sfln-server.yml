@@ -1,0 +1,78 @@
+name: SFLN Server & Dynamic DNS Update
+
+on:
+  workflow_dispatch:
+    inputs:
+      duration:
+        description: 'Server run duration (minutes)'
+        required: true
+        default: '60'
+      cname_update:
+        description: 'Update sfln-server.pdg.f5.si CNAME to tunnel URL?'
+        type: boolean
+        default: true
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        pip install -r sfln/server/requirements.txt
+        # Install cloudflared
+        wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+        sudo dpkg -i cloudflared-linux-amd64.deb
+
+    - name: Start SFLN Server in Background
+        # Starts both UDP 9000 and WebSocket 9001
+      run: |
+        python3 sfln/server/main.py > sfln_server.log 2>&1 &
+        echo "SFLN Server started."
+
+    - name: Start Cloudflare Tunnel
+      id: tunnel
+      run: |
+        # Use cloudflared tunnel --url to get a temporary URL
+        # We tunnel the WebSocket port 9001
+        cloudflared tunnel --url http://localhost:9001 > tunnel.log 2>&1 &
+        sleep 10
+        TUNNEL_URL=$(grep -o 'https://[a-zA-Z0-0.-]*\.trycloudflare\.com' tunnel.log | head -n 1)
+        echo "TUNNEL_URL=$TUNNEL_URL" >> $GITHUB_ENV
+        echo "Tunnel URL: $TUNNEL_URL"
+
+    - name: Update f5.si Dynamic DNS (CNAME)
+      if: ${{ github.event.inputs.cname_update == 'true' }}
+      run: |
+        # Remove https:// from TUNNEL_URL for CNAME
+        CNAME_VAL=$(echo ${{ env.TUNNEL_URL }} | sed 's/https:\/\///')
+
+        # Using the manual.php documentation:
+        # https://f5.si/update.php?domain=サブドメイン.ユーザ名&password=APIトークン&cname=CNAMEレコード値
+        # Note: Secrets should be configured in GitHub Repo Settings
+
+        DOMAIN="sfln-server.pdg"
+        PASSWORD="${{ secrets.F5_SI_API_TOKEN }}"
+
+        # Use curl to update
+        RESPONSE=$(curl -s "https://f5.si/update.php?domain=$DOMAIN&password=$PASSWORD&cname=$CNAME_VAL")
+        echo "DDNS Update Response: $RESPONSE"
+
+        if [[ $RESPONSE == *"OK:SUCCESS"* ]]; then
+          echo "Successfully updated sfln-server.pdg.f5.si to $CNAME_VAL"
+        else
+          echo "Failed to update DDNS. Please check secrets.F5_SI_API_TOKEN."
+        fi
+
+    - name: Keep Server Running
+      run: |
+        echo "SFLN Server is active at sfln-server.pdg.f5.si"
+        echo "Temporary URL: ${{ env.TUNNEL_URL }}"
+        sleep ${{ github.event.inputs.duration }}m
+        echo "Time is up. Shutting down."

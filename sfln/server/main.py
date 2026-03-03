@@ -4,35 +4,60 @@ import sys
 import os
 import json
 import uuid
+import websockets
 
 # Add parent directory
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from sfln.core import SFLNEngine
 
 class SFLNServer:
-    """
-    SFLN High-Performance Backbone Server.
-    Supports both JSON control channel and Binary high-speed data relay.
-    """
-    def __init__(self, port=9000, log_level=logging.INFO):
+    def __init__(self, port=9000, ws_port=9001, log_level=logging.INFO):
         self.port = port
+        self.ws_port = ws_port
         self.engine = SFLNEngine()
-        self.peers = {} # {node_id_bytes: addr}
+        self.udp_peers = {} # {node_id_bytes: addr}
+        self.ws_peers = {}  # {node_id_bytes: (websocket, node_id_str)}
         self.logger = logging.getLogger("SFLN-Server")
         self.logger.setLevel(log_level)
         logging.basicConfig(level=log_level, format='%(asctime)s [%(levelname)s] %(message)s')
 
     async def start(self):
-        self.logger.info(f"SFLN Professional Server starting on port {self.port}")
+        self.logger.info(f"SFLN Professional Server starting...")
         loop = asyncio.get_running_loop()
         self.transport, _ = await loop.create_datagram_endpoint(
-            lambda: SFLNServerProtocol(self),
-            local_addr=('0.0.0.0', self.port)
+            lambda: SFLNServerProtocol(self), local_addr=('0.0.0.0', self.port)
         )
-        try:
+        async with websockets.serve(self.ws_handler, "0.0.0.0", self.ws_port):
             await asyncio.Future()
+
+    async def ws_handler(self, websocket):
+        node_id_bytes = None
+        try:
+            async for message in websocket:
+                if isinstance(message, str):
+                    msg = json.loads(message)
+                    if msg.get("type") == "register":
+                        node_id_str = msg.get("node_id")
+                        node_id_bytes = uuid.UUID(node_id_str).bytes
+                        self.ws_peers[node_id_bytes] = (websocket, node_id_str)
+                        self.logger.info(f"Registered WS node {node_id_str}")
+                        await websocket.send(json.dumps({"type": "reg_ack"}))
+                elif isinstance(message, bytes):
+                    # Format: [Magic(1)][Type(1)][TargetID(16)][Total(4)][Idx(4)][Payload]
+                    if len(message) > 18 and message[0] == 0x53 and message[1] == 0x01:
+                        target_id_bytes = message[2:18]
+                        source_id_bytes = node_id_bytes or b'\x00'*16
+                        # Wrap for relay: [Magic(1)][Relay(1)][SourceID(16)][Total(4)][Idx(4)][Payload]
+                        relay_packet = bytearray([0x53, 0x02]) + source_id_bytes + message[18:]
+                        await self.relay_data(target_id_bytes, relay_packet)
         finally:
-            self.transport.close()
+            if node_id_bytes in self.ws_peers: del self.ws_peers[node_id_bytes]
+
+    async def relay_data(self, target_id, packet):
+        if target_id in self.udp_peers:
+            self.transport.sendto(packet, self.udp_peers[target_id])
+        elif target_id in self.ws_peers:
+            await self.ws_peers[target_id][0].send(packet)
 
 class SFLNServerProtocol(asyncio.DatagramProtocol):
     def __init__(self, server):
@@ -43,47 +68,17 @@ class SFLNServerProtocol(asyncio.DatagramProtocol):
         self.transport = transport
 
     def datagram_received(self, data, addr):
-        if not data: return
-        if self.server.logger.isEnabledFor(logging.DEBUG):
-            self.server.logger.debug(f"Datagram from {addr}: {data[:20].hex()}...")
-
-        # High-Speed Binary Relay Path
-        # Format: [Magic: 'S' (1b)][Type: 0x01 (1b)][TargetID (16b)][Payload]
-        if data[0] == 0x53 and len(data) > 18:
-            msg_type = data[1]
-            if msg_type == 0x01: # RELAY
-                target_id = data[2:18]
-                if target_id in self.server.peers:
-                    # Forward payload with minimal overhead
-                    # We wrap it with [Magic][Type: 0x02 (Relayed)][SourceAddr (not used for now)][Payload]
-                    relay_packet = bytearray([0x53, 0x02]) + data[18:]
-                    self.transport.sendto(relay_packet, self.server.peers[target_id])
-                return
-
-        # Control Channel (JSON)
-        try:
-            if data.startswith(b'{'):
-                msg = json.loads(data.decode())
-                mtype = msg.get("type")
-
-                if mtype == "register":
-                    node_id_str = msg.get("node_id")
-                    # Convert UUID string to 16 bytes for binary efficiency
-                    node_id_bytes = uuid.UUID(node_id_str).bytes
-                    self.server.peers[node_id_bytes] = addr
-                    self.server.logger.info(f"Registered node {node_id_str} at {addr}")
-                    self.transport.sendto(json.dumps({"type": "reg_ack"}).encode(), addr)
-
-                elif mtype == "get_peers":
-                    # Return list of active node IDs
-                    peers_list = [str(uuid.UUID(bytes=nid)) for nid in self.server.peers.keys()]
-                    self.transport.sendto(json.dumps({"type": "peers", "list": peers_list}).encode(), addr)
-        except Exception as e:
-            self.server.logger.error(f"Error handling control packet: {e}")
+        if len(data) > 18 and data[0] == 0x53 and data[1] == 0x01:
+            target_id = data[2:18]
+            # Simple relay (SourceID not easily known from UDP without session)
+            relay_packet = bytearray([0x53, 0x02]) + b'\x00'*16 + data[18:]
+            asyncio.create_task(self.server.relay_data(target_id, relay_packet))
+        elif data.startswith(b'{'):
+            msg = json.loads(data.decode())
+            if msg.get("type") == "register":
+                nid = uuid.UUID(msg.get("node_id")).bytes
+                self.server.udp_peers[nid] = addr
+                self.transport.sendto(json.dumps({"type": "reg_ack"}).encode(), addr)
 
 if __name__ == "__main__":
-    server = SFLNServer()
-    try:
-        asyncio.run(server.start())
-    except KeyboardInterrupt:
-        pass
+    asyncio.run(SFLNServer().start())
