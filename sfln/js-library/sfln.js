@@ -11,7 +11,13 @@ class SFLNCryptoJS {
         if (masterKey) {
             this.masterKey = masterKey;
         } else {
-            this.masterKey = crypto.getRandomValues(new Uint8Array(this.KEY_BITS / 8));
+            // Check for crypto availability
+            if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+                this.masterKey = crypto.getRandomValues(new Uint8Array(this.KEY_BITS / 8));
+            } else {
+                // Fallback for Node.js or environments without global crypto
+                this.masterKey = new Uint8Array(this.KEY_BITS / 8).fill(0).map(() => Math.floor(Math.random() * 256));
+            }
         }
     }
 
@@ -24,14 +30,20 @@ class SFLNCryptoJS {
         combined.set(chunkSeed, this.masterKey.length);
         combined.set(info, this.masterKey.length + chunkSeed.length);
 
-        const hashBuffer = await crypto.subtle.digest('SHA-256', combined);
-        return await crypto.subtle.importKey(
+        const subtle = (typeof crypto !== 'undefined' && crypto.subtle) ? crypto.subtle : null;
+        if (!subtle) throw new Error("WebCrypto not supported in this environment");
+
+        const hashBuffer = await subtle.digest('SHA-256', combined);
+        return await subtle.importKey(
             'raw', hashBuffer, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']
         );
     }
 
     async encryptData(data) {
         const encryptedChunks = [];
+        const subtle = (typeof crypto !== 'undefined' && crypto.subtle) ? crypto.subtle : null;
+        if (!subtle) throw new Error("WebCrypto not supported");
+
         for (let i = 0; i < data.length; i += this.CHUNK_SIZE) {
             const chunk = data.slice(i, i + this.CHUNK_SIZE);
             const idx = Math.floor(i / this.CHUNK_SIZE);
@@ -39,7 +51,7 @@ class SFLNCryptoJS {
             const key = await this.deriveChunkKey(idx, chunkSeed);
 
             const nonce = crypto.getRandomValues(new Uint8Array(12));
-            const encryptedBuffer = await crypto.subtle.encrypt(
+            const encryptedBuffer = await subtle.encrypt(
                 { name: 'AES-GCM', iv: nonce }, key, chunk
             );
 
@@ -55,12 +67,15 @@ class SFLNCryptoJS {
     }
 
     async decryptChunk(chunkData, index) {
+        const subtle = (typeof crypto !== 'undefined' && crypto.subtle) ? crypto.subtle : null;
+        if (!subtle) throw new Error("WebCrypto not supported");
+
         const nonce = chunkData.slice(0, 12);
         const chunkSeed = chunkData.slice(12, 12 + this.KEY_EMBED_SIZE);
         const encryptedPayload = chunkData.slice(12 + this.KEY_EMBED_SIZE);
 
         const key = await this.deriveChunkKey(index, chunkSeed);
-        const decryptedBuffer = await crypto.subtle.decrypt(
+        const decryptedBuffer = await subtle.decrypt(
             { name: 'AES-GCM', iv: nonce }, key, encryptedPayload
         );
         return new Uint8Array(decryptedBuffer);
@@ -69,11 +84,9 @@ class SFLNCryptoJS {
     async decryptChunks(chunks) {
         let decryptedParts = [];
         for (let i = 0; i < chunks.length; i++) {
-            // Support both old array of data and new array of {index, data} objects
             const chunkObj = chunks[i];
             const data = (chunkObj instanceof Uint8Array) ? chunkObj : chunkObj.data;
             const idx = (chunkObj instanceof Uint8Array) ? i : chunkObj.index;
-
             const decrypted = await this.decryptChunk(data, idx);
             decryptedParts.push(decrypted);
         }
@@ -92,7 +105,7 @@ class SFLNCryptoJS {
 class SFLNClientJS {
     constructor(masterKey = null, nodeId = null) {
         this.crypto = new SFLNCryptoJS(masterKey);
-        this.nodeId = nodeId || crypto.randomUUID();
+        this.nodeId = nodeId || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : this.generateUUID());
         this.ws = null;
         this.onMessage = null;
         this.onProgress = null;
@@ -100,32 +113,57 @@ class SFLNClientJS {
         this.activeTransfers = new Map();
     }
 
+    generateUUID() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
     async connect(serverUrl) {
         return new Promise((resolve, reject) => {
-            this.ws = new WebSocket(serverUrl);
-            this.ws.binaryType = 'arraybuffer';
-            this.ws.onopen = () => {
-                this.ws.send(JSON.stringify({ type: "register", node_id: this.nodeId }));
-            };
-            this.ws.onmessage = async (event) => {
-                if (typeof event.data === 'string') {
-                    const msg = JSON.parse(event.data);
-                    if (msg.type === 'reg_ack' && resolve) {
-                        resolve();
-                        if (this.onReady) this.onReady();
+            try {
+                this.ws = new WebSocket(serverUrl);
+                this.ws.binaryType = 'arraybuffer';
+
+                this.ws.onopen = () => {
+                    this.ws.send(JSON.stringify({ type: "register", node_id: this.nodeId }));
+                };
+
+                this.ws.onmessage = async (event) => {
+                    if (typeof event.data === 'string') {
+                        const msg = JSON.parse(event.data);
+                        if (msg.type === 'reg_ack') {
+                            if (this.onReady) this.onReady();
+                            resolve();
+                        }
+                    } else {
+                        const data = new Uint8Array(event.data);
+                        if (data[0] === 0x53 && data[1] === 0x02) {
+                            const sourceId = this.bytesToUuid(data.slice(2, 18));
+                            const totalChunks = new DataView(data.buffer, 18, 4).getUint32(0);
+                            const chunkIdx = new DataView(data.buffer, 22, 4).getUint32(0);
+                            const encryptedData = data.slice(26);
+                            this.handleReceivedChunk(sourceId, chunkIdx, totalChunks, encryptedData);
+                        }
                     }
-                } else {
-                    const data = new Uint8Array(event.data);
-                    if (data[0] === 0x53 && data[1] === 0x02) {
-                        const sourceId = this.bytesToUuid(data.slice(2, 18));
-                        const totalChunks = new DataView(data.buffer, 18, 4).getUint32(0);
-                        const chunkIdx = new DataView(data.buffer, 22, 4).getUint32(0);
-                        const encryptedData = data.slice(26);
-                        this.handleReceivedChunk(sourceId, chunkIdx, totalChunks, encryptedData);
-                    }
-                }
-            };
-            this.ws.onerror = (err) => reject(err);
+                };
+
+                this.ws.onerror = (err) => {
+                    console.error("[SFLN] WebSocket error", err);
+                    reject(new Error("WebSocket connection failed"));
+                };
+
+                this.ws.onclose = () => {
+                    console.log("[SFLN] WebSocket closed");
+                };
+
+                // Timeout
+                setTimeout(() => reject(new Error("Connection timeout")), 5000);
+
+            } catch (err) {
+                reject(err);
+            }
         });
     }
 
@@ -149,6 +187,7 @@ class SFLNClientJS {
     }
 
     async send(data, targetId) {
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) throw new Error("WebSocket not open");
         const encryptedChunks = await this.crypto.encryptData(data);
         const targetUUID = this.uuidToBytes(targetId);
         const total = encryptedChunks.length;
