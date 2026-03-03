@@ -9,6 +9,7 @@ on:
 
 jobs:
   python-test:
+    name: Python Integrated & Performance Tests
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -23,47 +24,52 @@ jobs:
         python -m pip install --upgrade pip
         pip install cryptography psutil PySide6 websockets
 
-    - name: Run SFLN Integrated Tests
+    - name: Core Integrated Tests
       run: |
         export QT_QPA_PLATFORM=offscreen
         python3 sfln/tests/full_test.py
 
-    - name: Run SFLN Relay Integration Test
+    - name: Relay Integration Test
       run: |
         python3 sfln/tests/integration_test.py
 
+    - name: Chaos & AI Routing Tests
+      run: |
+        python3 sfln/tests/chaos_test.py
+
+    - name: Server Load Test (100 Clients)
+      run: |
+        python3 sfln/tests/load_test.py
+
+    - name: Performance Tests (10MB, 100MB, 1GB, 10GB, 100GB, 1TB)
+      run: |
+        # 10MB test
+        python3 sfln/tests/performance_test.py --size 0.01
+        # 100MB test
+        python3 sfln/tests/performance_test.py --size 0.1
+        # 1GB test
+        python3 sfln/tests/performance_test.py --size 1.0
+        # 10GB test
+        python3 sfln/tests/performance_test.py --size 10.0
+        # 100GB test
+        python3 sfln/tests/performance_test.py --size 100.0
+        # 1TB test (Simulated streaming)
+        python3 sfln/tests/performance_test.py --size 1024.0
+
   js-test:
+    name: JavaScript & NPM Library Tests
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20'
-
     - name: Install dependencies
       run: |
         cd sfln/npm-library
         npm install
-        npm install ws # for testing if not in package.json
-
-    - name: Run SFLN JavaScript Library Tests
+        npm install ws
+    - name: Run JS Tests
       run: |
-        # Testing both raw JS and NPM library
         node sfln/tests/js_test.js
-
-  npm-build:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-    - name: NPM Library Build Check
-      run: |
-        cd sfln/npm-library
-        npm install
-        # Add build steps if any
-        # npm run build

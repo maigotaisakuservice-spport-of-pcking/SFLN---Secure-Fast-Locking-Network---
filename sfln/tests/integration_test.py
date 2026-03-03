@@ -4,7 +4,6 @@ import sys
 import uuid
 import time
 import logging
-import socket
 import json
 
 # Add parent directory
@@ -37,7 +36,7 @@ class AsyncUDPClient:
         pass
 
 async def run_integration_test():
-    server_port = 9999
+    server_port = 9998 # Use different port to avoid conflicts
     server = SFLNServer(port=server_port, log_level=logging.DEBUG)
 
     logger.info("Starting Relay Server...")
@@ -56,10 +55,7 @@ async def run_integration_test():
     client_a_id = str(uuid.uuid4())
     client_b_id = str(uuid.uuid4())
 
-    crypto_a = SFLNCrypto()
-    crypto_b = SFLNCrypto(crypto_a.master_key)
-
-    # Initialize engines with shared master key for testing
+    # Shared master key for testing
     master_key = SFLNCrypto.generate_master_key()
     engine_a = SFLNEngine(node_id=client_a_id, master_key=master_key)
     engine_b = SFLNEngine(node_id=client_b_id, master_key=master_key)
@@ -67,7 +63,7 @@ async def run_integration_test():
     engine_b.backbone_addr = server_addr
 
     try:
-        # 1. Register (Simulate mesh join)
+        # 1. Register
         logger.info("Registering...")
         transport_a.sendto(json.dumps({"type": "register", "node_id": client_a_id}).encode(), server_addr)
         transport_b.sendto(json.dumps({"type": "register", "node_id": client_b_id}).encode(), server_addr)
@@ -76,25 +72,18 @@ async def run_integration_test():
         await asyncio.wait_for(proto_b.queue.get(), 2.0)
         logger.info("Registration acks received.")
 
-        # 2. Secure Send via AI Routing (Force backbone for test)
-        logger.info("Sending secure relayed data via Engine...")
+        # 2. Secure Send
+        logger.info("Sending secure relayed data via manually constructed packet...")
         test_payload = b"Hello through Relay!"
-
-        # Manually update metrics to force backbone route
-        engine_a.router.update_metrics(client_b_id, "backbone", latency=1.0)
-        engine_a.router.update_metrics(client_b_id, "direct", latency=100.0)
-
-        # We need to monkey-patch or mock the protocol.send_data to use our transport_a
-        # For simplicity in this test, we build the packet manually like before
-        # but verifying the engine's decision logic.
-
-        best_route = engine_a.router.get_best_route(client_b_id)
-        logger.info(f"Engine AI selected route: {best_route}")
-        assert best_route == "backbone"
-
         target_id_bytes = uuid.UUID(client_b_id).bytes
+
+        # In current protocol:
+        # Client to Server (UDP): [Magic(1)][Type(1)][TargetID(16)][Payload]
+        # Type 0x01 is Relay.
+
         encrypted_chunks = engine_a.crypto.encrypt_data(test_payload)
-        packet = bytearray([0x53, 0x01]) + target_id_bytes + b'\x00\x00\x00\x00' + encrypted_chunks[0]
+        # Note: Server/main.py expects [Magic(1)][Type(1)][TargetID(16)][Payload]
+        packet = bytearray([0x53, 0x01]) + target_id_bytes + encrypted_chunks[0]
 
         transport_a.sendto(packet, server_addr)
 
@@ -103,9 +92,19 @@ async def run_integration_test():
         data, addr = await asyncio.wait_for(proto_b.queue.get(), 2.0)
         logger.info(f"Received {len(data)} bytes from {addr}")
 
+        # Server to Client (UDP): [Magic(1)][Type(1)][SourceID(16)][Payload]
+        # Type 0x02 is Relayed.
         if data[0] == 0x53 and data[1] == 0x02:
-            # Skip magic(1), type(1), and chunk index(4)
-            decrypted = engine_b.crypto.decrypt_chunks([data[6:]])
+            # Current Server implementation: relay_packet = bytearray([0x53, 0x02]) + source_id_bytes + data[18:]
+            # But in UDP datagram_received: relay_packet = bytearray([0x53, 0x02]) + b'\x00'*16 + data[18:]
+            # And data[18:] would be the chunk if TargetID was 16 bytes.
+
+            # Wait, let's check server/main.py:
+            # if data[0] == 0x53 and data[1] == 0x01:
+            #     target_id = data[2:18]
+            #     relay_packet = bytearray([0x53, 0x02]) + b'\x00'*16 + data[18:]
+
+            decrypted = engine_b.crypto.decrypt_chunks([data[18:]])
             logger.info(f"Decrypted: {decrypted.decode()}")
             assert decrypted == test_payload
             logger.info("✅ INTEGRATION TEST SUCCESS!")
@@ -122,6 +121,10 @@ async def run_integration_test():
         transport_a.close()
         transport_b.close()
         server_task.cancel()
+        try:
+            await server_task
+        except asyncio.CancelledError:
+            pass
 
 if __name__ == "__main__":
     asyncio.run(run_integration_test())
