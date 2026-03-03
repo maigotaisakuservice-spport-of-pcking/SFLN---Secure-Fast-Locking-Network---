@@ -11,11 +11,9 @@ class SFLNCryptoJS {
         if (masterKey) {
             this.masterKey = masterKey;
         } else {
-            // Check for crypto availability
             if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
                 this.masterKey = crypto.getRandomValues(new Uint8Array(this.KEY_BITS / 8));
             } else {
-                // Fallback for Node.js or environments without global crypto
                 this.masterKey = new Uint8Array(this.KEY_BITS / 8).fill(0).map(() => Math.floor(Math.random() * 256));
             }
         }
@@ -31,7 +29,7 @@ class SFLNCryptoJS {
         combined.set(info, this.masterKey.length + chunkSeed.length);
 
         const subtle = (typeof crypto !== 'undefined' && crypto.subtle) ? crypto.subtle : null;
-        if (!subtle) throw new Error("WebCrypto not supported in this environment");
+        if (!subtle) throw new Error("WebCrypto not supported");
 
         const hashBuffer = await subtle.digest('SHA-256', combined);
         return await subtle.importKey(
@@ -121,9 +119,16 @@ class SFLNClientJS {
     }
 
     async connect(serverUrl) {
+        // Automatically fix protocol (https -> wss, http -> ws)
+        let wsUrl = serverUrl;
+        if (wsUrl.startsWith("https://")) wsUrl = wsUrl.replace("https://", "wss://");
+        else if (wsUrl.startsWith("http://")) wsUrl = wsUrl.replace("http://", "ws://");
+
+        console.log(`[SFLN] Connecting to ${wsUrl}`);
+
         return new Promise((resolve, reject) => {
             try {
-                this.ws = new WebSocket(serverUrl);
+                this.ws = new WebSocket(wsUrl);
                 this.ws.binaryType = 'arraybuffer';
 
                 this.ws.onopen = () => {
@@ -150,16 +155,16 @@ class SFLNClientJS {
                 };
 
                 this.ws.onerror = (err) => {
-                    console.error("[SFLN] WebSocket error", err);
-                    reject(new Error("WebSocket connection failed"));
+                    reject(new Error("WebSocket Error: 接続が拒否されたか、証明書が無効です。"));
                 };
 
-                this.ws.onclose = () => {
-                    console.log("[SFLN] WebSocket closed");
-                };
-
-                // Timeout
-                setTimeout(() => reject(new Error("Connection timeout")), 5000);
+                // Connection Timeout
+                setTimeout(() => {
+                    if (this.ws.readyState !== WebSocket.OPEN) {
+                        this.ws.close();
+                        reject(new Error("Connection Timeout (10s)"));
+                    }
+                }, 10000);
 
             } catch (err) {
                 reject(err);
@@ -187,7 +192,7 @@ class SFLNClientJS {
     }
 
     async send(data, targetId) {
-        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) throw new Error("WebSocket not open");
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) throw new Error("WebSocket not connected");
         const encryptedChunks = await this.crypto.encryptData(data);
         const targetUUID = this.uuidToBytes(targetId);
         const total = encryptedChunks.length;

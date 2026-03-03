@@ -56,15 +56,18 @@ jobs:
           exit 1
         fi
 
+        # Convert https:// to wss:// for WebSocket compatibility
+        WS_TUNNEL_URL=$(echo $TUNNEL_URL | sed 's/https:\/\//wss:\/\//')
         echo "TUNNEL_URL=$TUNNEL_URL" >> $GITHUB_ENV
+        echo "WS_TUNNEL_URL=$WS_TUNNEL_URL" >> $GITHUB_ENV
         echo "Tunnel URL: $TUNNEL_URL"
+        echo "WS Tunnel URL: $WS_TUNNEL_URL"
 
     - name: Update js/server-config.js
       run: |
-        # Write tunnel URL to JS config file for demo page
         mkdir -p js
-        echo "const SFLN_SERVER_CONFIG = { url: '${{ env.TUNNEL_URL }}' };" > js/server-config.js
-        echo "Updated js/server-config.js with ${{ env.TUNNEL_URL }}"
+        echo "const SFLN_SERVER_CONFIG = { url: '${{ env.WS_TUNNEL_URL }}' };" > js/server-config.js
+        echo "Updated js/server-config.js with ${{ env.WS_TUNNEL_URL }}"
 
     - name: Update f5.si Dynamic DNS (CNAME)
       if: ${{ github.event.inputs.cname_update == 'true' }}
@@ -83,18 +86,8 @@ jobs:
           echo "Failed to update DDNS. Response: $RESPONSE"
         fi
 
-    - name: Verify Server & Tunnel
-      run: |
-        echo "--- Server Log ---"
-        head -n 20 sfln_server.log
-        echo "--- Tunnel Status ---"
-        pgrep -af cloudflared
-        echo "--- SFLN Status ---"
-        pgrep -af python3
-
     - name: Keep Server Running
       run: |
         echo "SFLN Server is active at sfln-server.pdg.f5.si"
-        echo "Temporary Tunnel URL: ${{ env.TUNNEL_URL }}"
+        echo "Temporary Tunnel URL: ${{ env.WS_TUNNEL_URL }}"
         sleep ${{ github.event.inputs.duration }}m
-        echo "Duration over. Shutting down."

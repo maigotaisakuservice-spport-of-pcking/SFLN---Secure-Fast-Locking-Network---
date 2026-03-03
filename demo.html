@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        .demo-container { max-width: 800px; margin: 50px auto; padding: 20px; background: var(--card-bg-color); border-radius: 8px; border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .demo-container { max-width: 800px; margin: 30px auto; padding: 20px; background: var(--card-bg-color); border-radius: 8px; border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
         .mode-selector { display: flex; gap: 10px; margin-bottom: 20px; }
         .mode-btn { flex: 1; padding: 15px; border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; text-align: center; background: #1c2128; color: var(--secondary-text-color); transition: all 0.2s; }
         .mode-btn:hover { border-color: var(--accent-color); }
@@ -22,6 +22,9 @@
         input[type="text"] { background: #0d1117; border: 1px solid var(--border-color); color: var(--primary-text-color); padding: 12px; border-radius: 4px; width: 100%; box-sizing: border-box; font-family: monospace; }
         code { background: #2d333b; padding: 2px 6px; border-radius: 4px; font-family: monospace; color: var(--accent-color); word-break: break-all; }
         #log-content div { border-bottom: 1px solid #21262d; padding: 4px 0; }
+        .server-status { padding: 8px; border-radius: 4px; font-size: 0.8rem; margin-bottom: 10px; }
+        .status-online { background: #1b4332; color: #74c69d; }
+        .status-offline { background: #431b1b; color: #c67474; }
     </style>
 </head>
 <body>
@@ -39,16 +42,28 @@
 
     <main class="demo-container">
         <h1>SFLN インタラクティブ・デモ</h1>
-        <p style="color: var(--secondary-text-color); margin-bottom: 2rem;">12,000桁（40,000ビット）の次世代暗号化と、リレーネットワークをブラウザ上で体験してください。</p>
+
+        <div id="server-status" class="server-status status-offline">サーバー接続中...</div>
 
         <section style="padding: 0;">
+            <div style="margin-bottom: 15px;">
+                <label style="font-size: 0.8rem; color: var(--secondary-text-color);">リレーサーバーURL:</label>
+                <div style="display: flex; gap: 5px;">
+                    <input type="text" id="server-url-input" placeholder="wss://..." style="flex: 1; padding: 8px;">
+                    <button class="btn" style="width: auto; padding: 8px 15px;" onclick="reconnect()">再接続</button>
+                </div>
+                <p style="font-size: 0.7rem; color: var(--secondary-text-color); margin-top: 4px;">
+                    ※SSLエラーが出る場合は https を wss に変えるか、一時URL (trycloudflare.com) を直接入力してください。
+                </p>
+            </div>
+
             <h3 style="margin-bottom: 1rem;">1. 通信モードの選択</h3>
             <div class="mode-selector">
                 <div id="mode-local" class="mode-btn active" onclick="setMode('local')">
-                    <strong>ローカルテスト</strong><br><small>同じPCの別タブ間で通信</small>
+                    <strong>ローカルテスト</strong><br><small>自分自身に送信</small>
                 </div>
                 <div id="mode-remote" class="mode-btn" onclick="setMode('remote')">
-                    <strong>リモートテスト</strong><br><small>遠くの人とQRで接続</small>
+                    <strong>リモートテスト</strong><br><small>遠くの人とQRでペアリング</small>
                 </div>
             </div>
 
@@ -58,11 +73,10 @@
                     <div style="text-align: center;">
                         <p style="font-size: 0.9rem; margin-bottom: 0.5rem;">あなたのノードID:</p>
                         <code id="my-id">...</code>
-                        <p style="font-size: 0.8rem; color: var(--secondary-text-color); margin-top: 1rem;">相手にこのQRコードを読み取ってもらうか、IDを伝えてください。</p>
                     </div>
                     <div style="width: 100%; border-top: 1px solid var(--border-color); margin-top: 10px; padding-top: 20px;">
                         <input type="text" id="target-id" placeholder="相手のノードIDを入力" style="margin-bottom: 10px;">
-                        <button class="btn" onclick="connectToTarget()">相手とペアリング</button>
+                        <button class="btn" onclick="connectToTarget()">ペアリング設定</button>
                     </div>
                 </div>
             </div>
@@ -80,7 +94,7 @@
             <div style="border: 2px dashed var(--border-color); padding: 30px; text-align: center; margin-bottom: 20px; border-radius: 8px;">
                 <p style="margin-bottom: 15px;">ファイルをドロップ、または選択してください</p>
                 <input type="file" id="file-input" style="display: none;" onchange="handleFileSelect(event)">
-                <button class="btn" id="send-btn" onclick="document.getElementById('file-input').click()" disabled>ファイルを選択して送信</button>
+                <button class="btn" id="send-btn" onclick="document.getElementById('file-input').click()" disabled>送信開始</button>
             </div>
 
             <div id="transfer-view" style="display: none;">
@@ -89,35 +103,28 @@
                     <span id="ai-path-label" style="background: #1f2937; padding: 2px 10px; border-radius: 12px; font-size: 0.8em; color: var(--accent-color); border: 1px solid var(--accent-color);">AI: 経路解析中...</span>
                     <span id="label-target">先: <strong>...</strong></span>
                 </div>
-                <div style="height: 12px; background: #21262d; border-radius: 6px; overflow: hidden; margin-bottom: 10px; border: 1px solid var(--border-color);">
-                    <div id="progress-bar" style="width: 0%; height: 100%; background: var(--accent-color); transition: width 0.1s; box-shadow: 0 0 10px var(--accent-color);"></div>
+                <div style="height: 12px; background: #21262d; border-radius: 6px; overflow: hidden; margin-bottom: 10px;">
+                    <div id="progress-bar" style="width: 0%; height: 100%; background: var(--accent-color); transition: width 0.1s;"></div>
                 </div>
                 <div id="crypto-stats" style="font-size: 0.85rem; color: var(--secondary-text-color);">
-                    <p>🔑 状態: <span id="status-text" style="color: var(--primary-text-color);">待機中</span></p>
                     <p>📦 転送チャンク: <span id="chunk-info">0 / 0</span> (1KB cells)</p>
                 </div>
             </div>
         </section>
 
         <div id="status-area">
-            <strong style="font-size: 0.9rem;">システムログ:</strong>
-            <div id="log-content" style="font-family: monospace; font-size: 0.8rem; height: 150px; overflow-y: auto; margin-top: 8px; color: #8b949e; background: #0d1117; padding: 12px; border-radius: 4px; border: 1px solid var(--border-color);">
+            <div id="log-content" style="font-family: monospace; font-size: 0.8rem; height: 120px; overflow-y: auto; color: #8b949e; background: #0d1117; padding: 12px; border-radius: 4px; border: 1px solid var(--border-color);">
                 <div>> SFLN ライブラリを初期化中...</div>
             </div>
         </div>
     </main>
 
     <script src="sfln/js-library/sfln.js"></script>
-    <script src="js/server-config.js" onerror="console.log('Using default server URL')"></script>
+    <script src="js/server-config.js" onerror="console.log('No dynamic config')"></script>
     <script>
         let client;
         let mode = 'local';
-        let serverUrl = "wss://sfln-server.pdg.f5.si"; // Default
-
-        if (typeof SFLN_SERVER_CONFIG !== 'undefined' && SFLN_SERVER_CONFIG.url) {
-            serverUrl = SFLN_SERVER_CONFIG.url;
-            console.log("[SFLN] Using dynamic server URL: " + serverUrl);
-        }
+        const defaultServerUrl = "wss://sfln-server.pdg.f5.si";
 
         function log(msg) {
             const logContent = document.getElementById('log-content');
@@ -128,57 +135,70 @@
         }
 
         async function initSFLN() {
+            client = new SFLNClientJS();
+            document.getElementById('my-id').innerText = client.nodeId;
+            document.getElementById('label-source').innerHTML = `元: <strong>${client.nodeId.substring(0,8)}...</strong>`;
+
+            new QRCode(document.getElementById('qrcode'), {
+                text: client.nodeId,
+                width: 128, height: 128,
+                colorDark : "#000000", colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+
+            // Set initial URL
+            const urlInput = document.getElementById('server-url-input');
+            if (typeof SFLN_SERVER_CONFIG !== 'undefined' && SFLN_SERVER_CONFIG.url) {
+                urlInput.value = SFLN_SERVER_CONFIG.url;
+            } else {
+                urlInput.value = defaultServerUrl;
+            }
+
+            await reconnect();
+
+            client.onProgress = (current, total) => {
+                const progress = (current / total) * 100;
+                document.getElementById('transfer-view').style.display = 'block';
+                document.getElementById('progress-bar').style.width = progress + "%";
+                document.getElementById('chunk-info').innerText = `${current} / ${total}`;
+            };
+
+            client.onMessage = (data, senderId) => {
+                log(`🔐 ${senderId.substring(0,8)}... から受信・復号しました！`);
+                const blob = new Blob([data]);
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = "sfln_file_" + Date.now();
+                a.innerText = "📥 ファイルを保存";
+                a.className = "btn"; a.style.marginTop = "15px";
+                document.getElementById('status-area').appendChild(a);
+            };
+        }
+
+        async function reconnect() {
+            const url = document.getElementById('server-url-input').value.trim();
+            const statusEl = document.getElementById('server-status');
+            const sendBtn = document.getElementById('send-btn');
+
+            statusEl.innerText = "サーバー接続中...";
+            statusEl.className = "server-status status-offline";
+            sendBtn.disabled = true;
+
+            log(`サーバーに接続を試行中: ${url}`);
+
             try {
-                client = new SFLNClientJS();
-                document.getElementById('my-id').innerText = client.nodeId;
-                document.getElementById('label-source').innerHTML = `元: <strong>${client.nodeId.substring(0,8)}...</strong>`;
-
-                const qrcodeContainer = document.getElementById('qrcode');
-                qrcodeContainer.innerHTML = '';
-                new QRCode(qrcodeContainer, {
-                    text: client.nodeId,
-                    width: 128, height: 128,
-                    colorDark : "#000000", colorLight : "#ffffff",
-                    correctLevel : QRCode.CorrectLevel.H
-                });
-
-                log(`ノードID ${client.nodeId} を生成しました。`);
-                log(`サーバー接続先: ${serverUrl}`);
-
-                client.connect(serverUrl).then(() => {
-                    log("SFLN リレーサーバーに接続しました。");
-                    document.getElementById('send-btn').disabled = false;
-                }).catch(e => {
-                    log("サーバー接続エラー: " + e.message);
-                    log("ローカルシミュレーションのみ可能です。");
-                    document.getElementById('send-btn').disabled = false;
-                });
-
-                client.onProgress = (current, total) => {
-                    const progress = (current / total) * 100;
-                    document.getElementById('transfer-view').style.display = 'block';
-                    document.getElementById('progress-bar').style.width = progress + "%";
-                    document.getElementById('chunk-info').innerText = `${current} / ${total}`;
-                    document.getElementById('status-text').innerText = "🔐 暗号化チャンクを受信中...";
-                };
-
-                client.onMessage = (data, senderId) => {
-                    log(`🔐 ${senderId.substring(0,8)}... からのデータを受信・復号しました！`);
-                    const blob = new Blob([data]);
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = "sfln_decrypted_" + Date.now();
-                    a.innerText = "📥 受信ファイルを保存";
-                    a.className = "btn";
-                    a.style.marginTop = "15px";
-                    document.getElementById('status-area').appendChild(a);
-
-                    document.getElementById('status-text').innerText = "✅ 受信・復号完了";
-                    document.getElementById('status-text').style.color = "#3fb950";
-                };
-            } catch (err) {
-                log("初期化エラー: " + err.message);
+                await client.connect(url);
+                log("✅ リレーサーバーに接続しました。");
+                statusEl.innerText = "サーバー稼働中 (" + new URL(url).hostname + ")";
+                statusEl.className = "server-status status-online";
+                sendBtn.disabled = false;
+            } catch (e) {
+                log("❌ 接続エラー: " + e.message);
+                if (e.message.includes("SSL")) {
+                    log("SSL証明書のエラーです。サーバーのURLを直接開き、証明書を許可してください。");
+                }
+                statusEl.innerText = "サーバーオフライン";
+                sendBtn.disabled = false; // Allow local simulation
             }
         }
 
@@ -188,45 +208,29 @@
             document.getElementById('mode-remote').classList.toggle('active', mode === 'remote');
             document.getElementById('setup-local').style.display = mode === 'local' ? 'block' : 'none';
             document.getElementById('setup-remote').style.display = mode === 'remote' ? 'block' : 'none';
-            log(`モードを ${mode === 'local' ? 'ローカル' : 'リモート'} に変更しました。`);
         }
 
         function connectToTarget() {
             const targetId = document.getElementById('target-id').value.trim();
-            if (!targetId || targetId.length < 10) return alert("有効なノードIDを入力してください");
-            log(`ターゲットノード ${targetId} をペアリングしました。`);
+            if (!targetId || targetId.length < 10) return alert("ノードIDを入力してください");
+            log(`ペアリング: ${targetId}`);
             document.getElementById('label-target').innerHTML = `先: <strong>${targetId.substring(0,8)}...</strong>`;
         }
 
         async function handleFileSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
-
-            const targetIdInput = document.getElementById('target-id').value.trim();
-            const targetId = mode === 'local' ? client.nodeId : targetIdInput;
-
-            if (mode === 'remote' && (!targetId || targetId.length < 10)) {
-                return alert("先に相手のノードIDを入力してペアリングしてください");
-            }
+            const targetId = mode === 'local' ? client.nodeId : document.getElementById('target-id').value.trim();
+            if (mode === 'remote' && !targetId) return alert("ペアリングしてください");
 
             document.getElementById('transfer-view').style.display = 'block';
-            document.getElementById('progress-bar').style.width = "0%";
-            document.getElementById('status-text').innerText = "12,000桁暗号で断片化・暗号化中...";
-
             const reader = new FileReader();
             reader.onload = async (e) => {
-                const data = new Uint8Array(e.target.result);
-                log(`${file.name} (${data.length} bytes) の暗号化送信を開始。`);
-
                 try {
-                    await client.send(data, targetId);
-                    log("全チャンクの送信が完了しました。");
-                    document.getElementById('status-text').innerText = "✅ 送信完了";
-                    document.getElementById('status-text').style.color = "#3fb950";
-                } catch (err) {
-                    log("送信エラー: " + err.message);
-                    document.getElementById('status-text').innerText = "❌ 送信失敗";
-                }
+                    log(`${file.name} を暗号化送信中...`);
+                    await client.send(new Uint8Array(e.target.result), targetId);
+                    log("送信完了！");
+                } catch (err) { log("エラー: " + err.message); }
             };
             reader.readAsArrayBuffer(file);
         }
