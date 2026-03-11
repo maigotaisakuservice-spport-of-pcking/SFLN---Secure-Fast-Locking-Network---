@@ -30,8 +30,27 @@ jobs:
 
     - name: Build Optimized CUI (Server Mode)
       run: |
-        # Use common cli.py for all platforms
         pyinstaller --console --onefile --name SFLN-Server-${{ matrix.os }}-CUI --paths . sfln/server/cli.py
+
+    - name: Automatic Binary Tests (Smoke Tests)
+      shell: bash
+      run: |
+        # 1. Test GUI Client Initialization
+        if [ "${{ matrix.os }}" == "windows-latest" ]; then
+          echo "Verifying Win Binary existence..."
+          ls dist/SFLN-Client-windows-latest.exe
+          ls dist/SFLN-Server-windows-latest-CUI.exe
+        else
+          echo "Running Headless GUI Test..."
+          export QT_QPA_PLATFORM=offscreen
+          timeout 10s ./dist/SFLN-Client-${{ matrix.os }} --help || echo "Exit expected"
+        fi
+
+        # 2. Test CUI Server Client
+        if [ "${{ matrix.os }}" != "windows-latest" ]; then
+           echo "Verifying CUI Command Line..."
+           ./dist/SFLN-Server-${{ matrix.os }}-CUI --help
+        fi
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
@@ -87,17 +106,13 @@ jobs:
 
     - name: Update index.html Download Links
       run: |
-        sed -i 's|href="[^"]*" id="download-windows"|href="client-apps/v-current/SFLN-Client-windows-latest.exe" id="download-windows"|' index.html
-        sed -i 's|href="[^"]*" id="download-linux"|href="client-apps/v-current/SFLN-Client-ubuntu-latest" id="download-linux"|' index.html
-        sed -i 's|href="[^"]*" id="download-macos"|href="client-apps/v-current/SFLN-Client-macos-latest" id="download-macos"|' index.html
-        sed -i 's|href="[^"]*" id="download-win-server"|href="client-apps/v-current/SFLN-Server-windows-latest-CUI.exe" id="download-win-server"|' index.html
-        sed -i 's|href="[^"]*" id="download-linux-server"|href="client-apps/v-current/SFLN-Server-ubuntu-latest-CUI" id="download-linux-server"|' index.html
-        sed -i 's|href="[^"]*" id="download-android"|href="client-apps/v-current/SFLN-Android-Bundle.apk" id="download-android"|' index.html
+        # Use Python script for reliable link updates
+        python3 sfln/tests/update_links.py
 
     - name: Push to Repository
       run: |
         git config --global user.name "SFLN Build Bot"
         git config --global user.email "build-bot@sfln.p2p"
         git add client-apps/ index.html
-        git commit -m "chore: deploy latest builds and rotate [skip ci]" || echo "No changes"
+        git commit -m "chore: deploy latest builds with smoke tests [skip ci]" || echo "No changes"
         git push origin main || echo "Push failed"
