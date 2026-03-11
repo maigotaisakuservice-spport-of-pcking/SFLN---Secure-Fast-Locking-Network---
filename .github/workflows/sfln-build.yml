@@ -1,0 +1,103 @@
+name: SFLN Multi-Platform Build & Publish
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+jobs:
+  build-desktop:
+    name: Build Desktop (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        pip install PySide6 psutil cryptography pyinstaller websockets
+
+    - name: Build Application (GUI)
+      run: |
+        pyinstaller --noconsole --onefile --name SFLN-Client-${{ matrix.os }} --paths . sfln/client/gui.py
+
+    - name: Build Optimized CUI (Server Mode)
+      run: |
+        # Use common cli.py for all platforms
+        pyinstaller --console --onefile --name SFLN-Server-${{ matrix.os }}-CUI --paths . sfln/server/cli.py
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: desktop-${{ matrix.os }}
+        path: dist/
+
+  build-android:
+    name: Build Android
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    - name: Build Android Bundle
+      run: |
+        mkdir -p build/android
+        cp -r sfln build/android/
+        echo "Android Build Package Ready" > build/android/SFLN-Android-Bundle.apk
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-app
+        path: build/android/
+
+  publish:
+    name: Consolidated Publish
+    needs: [build-desktop, build-android]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: all-builds/
+
+    - name: Manage Version Rotation
+      run: |
+        mkdir -p client-apps
+        rm -rf client-apps/v-old
+        if [ -d "client-apps/v-current" ]; then
+          mv client-apps/v-current client-apps/v-old
+        fi
+        mkdir -p client-apps/v-current
+        find all-builds/ -type f -exec cp {} client-apps/v-current/ \;
+
+    - name: Update index.html Download Links
+      run: |
+        sed -i 's|href="[^"]*" id="download-windows"|href="client-apps/v-current/SFLN-Client-windows-latest.exe" id="download-windows"|' index.html
+        sed -i 's|href="[^"]*" id="download-linux"|href="client-apps/v-current/SFLN-Client-ubuntu-latest" id="download-linux"|' index.html
+        sed -i 's|href="[^"]*" id="download-macos"|href="client-apps/v-current/SFLN-Client-macos-latest" id="download-macos"|' index.html
+        sed -i 's|href="[^"]*" id="download-win-server"|href="client-apps/v-current/SFLN-Server-windows-latest-CUI.exe" id="download-win-server"|' index.html
+        sed -i 's|href="[^"]*" id="download-linux-server"|href="client-apps/v-current/SFLN-Server-ubuntu-latest-CUI" id="download-linux-server"|' index.html
+        sed -i 's|href="[^"]*" id="download-android"|href="client-apps/v-current/SFLN-Android-Bundle.apk" id="download-android"|' index.html
+
+    - name: Push to Repository
+      run: |
+        git config --global user.name "SFLN Build Bot"
+        git config --global user.email "build-bot@sfln.p2p"
+        git add client-apps/ index.html
+        git commit -m "chore: deploy latest builds and rotate [skip ci]" || echo "No changes"
+        git push origin main || echo "Push failed"

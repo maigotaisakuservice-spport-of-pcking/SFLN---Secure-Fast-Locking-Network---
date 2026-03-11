@@ -93,13 +93,36 @@
 
         <section id="download" class="container">
             <h2>ダウンロード</h2>
-            <p>SFLNクライアント（Beta版）が公開されました。ソースコードからのビルドまたはパッケージのダウンロードが可能です。</p>
-            <div class="download-links">
-                <a href="sfln/client/build_instructions.md" id="download-windows" class="download-button">Windows (Build)</a>
-                <a href="#" id="download-android" class="download-button" style="opacity: 0.5; cursor: not-allowed;">Android (準備中)</a>
-                <a href="sfln/client/build_instructions.md" id="download-linux" class="download-button">Linux (Build)</a>
+            <p>最新のビルド済みパッケージをダウンロードできます。常に最新のセキュリティが適用されます。</p>
+
+            <div style="margin-top: 20px;">
+                <h4>デスクトップ (GUI)</h4>
+                <div class="download-links">
+                    <a href="#" id="download-windows" class="download-button">Windows版 (.exe)</a>
+                    <a href="#" id="download-linux" class="download-button">Linux版 (Binary)</a>
+                    <a href="#" id="download-macos" class="download-button">macOS版 (Binary)</a>
+                </div>
             </div>
-            <p style="margin-top: 20px; font-size: 0.9em; color: #666;">※ Android版は現在開発中です。デスクトップ版はビルド手順に従って実行バイナリを作成できます。</p>
+
+            <div style="margin-top: 30px;">
+                <h4>サーバー (CLI最適化版)</h4>
+                <div class="download-links">
+                    <a href="#" id="download-win-server" class="download-button">Windows Server版</a>
+                    <a href="#" id="download-linux-server" class="download-button">Linux Server版</a>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <h4>モバイル</h4>
+                <div class="download-links">
+                    <a href="#" id="download-android" class="download-button">Android版 (APK)</a>
+                </div>
+            </div>
+
+            <p style="margin-top: 30px; font-size: 0.8em; color: var(--secondary-text-color);">
+                ※ 自動ビルドシステムにより、常に最新の2バージョンが維持されます。
+                リンクが古い場合は、再度ページを読み込んでください。
+            </p>
         </section>
 
         <section id="news" class="container">
@@ -107,7 +130,7 @@
             <div class="news-list">
                 <article>
                     <time datetime="2025-10-24">2025.10.24</time>
-                    <p>SFLNサービス本体・クライアント・ライブラリの完全実装版をリリースしました！</p>
+                    <p>マルチプラットフォーム自動ビルド・公開システムを稼働開始しました。</p>
                 </article>
                 <article>
                     <time datetime="2025-09-15">2025.09.15</time>

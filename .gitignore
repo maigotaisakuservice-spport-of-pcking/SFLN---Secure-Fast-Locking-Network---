@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+dist/
+build/
+*.spec
+
+# Node
+node_modules/
+
+# SFLN Artifacts (Intentionally kept for client-apps)
+!client-apps/

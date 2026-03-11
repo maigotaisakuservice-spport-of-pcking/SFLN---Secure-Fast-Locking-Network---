@@ -1,0 +1,28 @@
+[tool.briefcase]
+project_name = "SFLN"
+bundle = "si.f5.pdg"
+version = "1.0.0"
+url = "https://sfln-server.pdg.f5.si"
+author = "SFLN Team"
+author_email = "team@sfln.p2p"
+
+[tool.briefcase.app.sfln]
+formal_name = "SFLN Client"
+description = "Secure Fast Locking Network Client"
+icon = "resources/sfln"
+sources = ["sfln"]
+requires = ["cryptography", "websockets"]
+
+[tool.briefcase.app.sfln.macOS]
+universal_build = true
+requires = ["PySide6"]
+
+[tool.briefcase.app.sfln.linux]
+requires = ["PySide6"]
+
+[tool.briefcase.app.sfln.windows]
+requires = ["PySide6"]
+
+[tool.briefcase.app.sfln.android]
+requires = ["chaquopy"]
+console_app = false
