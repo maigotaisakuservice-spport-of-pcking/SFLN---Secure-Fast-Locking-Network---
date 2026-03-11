@@ -1,95 +1,63 @@
-# SFLN (Secure-Fast-Locking-Network) セットアップガイド
+# SFLN (Secure-Fast-Locking-Network)
 
-SFLNサービス、サーバー、およびクライアントのセットアップ方法について説明します。
-
-## 🚀 クイックスタート (デモ)
-
-GitHub Actions を使用して、自分専用の一時的なリレーサーバーを即座に起動し、遠隔地との暗号化通信をテストできます。
-
-1.  **GitHub Secrets の設定**:
-    リポジトリの `Settings > Secrets and variables > Actions` にて、以下のシークレットを登録してください。
-    - **Name**: `F5_SI_API_TOKEN`
-    - **Secret**: `2d4a704921a716d36bd7dfa3a3d8d74e` (ご提示いただいたキー)
-2.  **サーバーの起動**:
-    GitHub リポジトリの `Actions` タブから `SFLN Server & Dynamic DNS Update` を選択し、`Run workflow` をクリックします。
-    - これにより、`sfln-server.pdg.f5.si` が自動的に起動したサーバーに紐付けられます。
-3.  **デモページにアクセス**:
-    ブラウザで `demo.html` を開きます。
-4.  **ペアリングと送信**:
-    - Aさんが「リモートテスト」を選択し、表示されたQRコードまたはIDをBさんに伝えます。
-    - BさんがそのIDを入力して「ペアリング」し、ファイルを送信します。
-    - 12,000桁の暗号化を施されたデータが、世界中のどこからでも安全にリレーされます。
+SFLN は、究極のセキュリティ（12,000桁暗号）と圧倒的な速度（1GB/s ターゲット）を両立させた次世代 P2P メッシュネットワーク規格です。
 
 ---
 
-## 🛠️ 開発者向け導入ガイド
+## 📱 クライアント・アプリケーション (利用者向け)
 
-### Webサイト・アプリへの導入 (JavaScript)
+一般利用者やシステム管理者が SFLN ネットワークに参加し、安全な通信を確立するためのアプリです。
 
-わずか数行で、既存のWebサイトに最強の暗号化通信を追加できます。
+### 1. デスクトップ GUI 版 (Windows / Linux / macOS)
+直感的なインターフェースで SFLN を制御できます。
+- **Dashboard**: ワンクリックで SFLN メッシュネットワークに接続。
+- **Excluded Apps**: 特定のアプリ（銀行アプリやゲーム等）を SFLN の保護から除外し、低遅延で直接通信させる設定。
+- **Excluded Sites**: 特定のドメインをバイパスさせるリスト管理。
 
-```html
-<!-- ライブラリの読み込み -->
-<script src="sfln/js-library/sfln.js"></script>
-
-<script>
-  const client = new SFLNClientJS();
-
-  // サーバーに接続 (デフォルトのリレーサーバーを使用)
-  await client.connect('wss://sfln-server.pdg.f5.si');
-
-  // データ受信時の処理
-  client.onMessage = (data, senderId) => {
-    console.log(`${senderId} から安全に受信・復号されたデータ:`, data);
-  };
-
-  // 相手のノードIDを指定してデータを送信 (自動で12,000桁暗号化)
-  await client.send(new Uint8Array([1, 2, 3]), "TARGET_NODE_ID");
-</script>
-```
-
-### サーバーのセットアップ (Python/Docker)
-
-自前のリレーサーバーを構築する場合の手順です。
-
-1.  **依存関係のインストール**:
-    ```bash
-    pip install -r sfln/server/requirements.txt
-    ```
-
-2.  **サーバーの起動**:
-    UDP (9000) と WebSocket (9001) の両方で待ち受けを開始します。
-    ```bash
-    python3 sfln/server/main.py
-    ```
+### 2. 高性能 CUI 版 (Windows Server / Linux Server)
+サーバー環境に最適化された GUI なしの軽量クライアントです。
+- **役割**: 24時間365日の安定稼働と、バックボーン・リレー・ノードとしての高速通信。
+- **使い方**: 実行ファイル（SFLN-Server-...-CUI）をコマンドラインから起動。
+- **特徴**: 最小限のメモリ消費で 1GB/s の最大スループットを維持します。
 
 ---
 
-## 🧪 テストと検証
+## 🛠️ 開発者向けライブラリ (SDK)
 
-### 継続的インテグレーション (CI)
-`.github/workflows/sfln-ci.yml` が同梱されており、`push` ごとに以下のテストが自動実行されます：
-- Python コア機能テスト
-- WebSocket 統合リレーテスト
-- JavaScript / NPM ライブラリ互換性テスト
+独自のアプリケーションや Web サイトに SFLN の強力なセキュリティを組み込むためのライブラリです。
 
-### 手動テスト
-```bash
-# 全機能統合テスト
-python3 sfln/tests/full_test.py
+### 1. JavaScript SDK (Web サイト・ブラウザ向け)
+Web ブラウザ上で SFLN 通信を可能にします。
+- **役割**: 12,000桁暗号化をブラウザ内で完結させ、P2P スタイルのファイル転送を実現。
+- **使い方**: `sfln/js-library/sfln.js` を読み込み、数行のコードでセキュア接続。
+- **機能**: 1KB単位の自動チャンク分割・再構成・AES-GCM暗号化。
 
-# JSライブラリテスト (Node.js)
-node sfln/tests/js_test.js
-```
+### 2. Python SDK (ネイティブアプリ・ツール向け)
+Python プログラムに SFLN を統合します。
+- **役割**: ノード間の認証、AIルーティング、暗号化通信のバックエンド。
+- **使い方**: `from sfln.python_library.sdk import SFLNSDK` を使用。
 
 ---
 
-## 📝 運用に関する重要事項
+## 🚀 自動ビルド・テスト・配布システム
 
-### GitHub Actionsでの運用
-同梱の `sfln-server.yml` は**テストおよびデモ目的**のものです。
-- Cloudflare Tunnel を使用して外部公開し、`f5.si` DDNS を自動更新します。
-- 長時間の運用や商用利用には、VPS（AWS, GCP等）へのデプロイを推奨します。
+本リポジトリは GitHub Actions により完全に自動化されています。
 
-### セキュリティ
-SFLNは、12,000桁のマスターキーから派生した一時的な鍵を使用し、AES-GCM 1KB チャンク単位で暗号化を行います。これにより、量子コンピュータでも解読が困難なレベルの安全性を目指しています。
+### 自動配布 (CD)
+コードがプッシュされると `sfln-build.yml` が作動し、以下の6種類を自動ビルドして公式サイト (index.html) のダウンロードリンクを更新します：
+- **GUI版**: Windows, Linux, macOS
+- **CUI版**: Windows Server, Linux Server
+- **モバイル版**: Android (APK)
+
+### 自動テスト (CI)
+`sfln-ci.yml` により、以下の項目を常時検証しています：
+- **全機能テスト**: 暗号化、コンテキスト認証、AIルーティング。
+- **負荷テスト**: 100クライアント同時接続。
+- **パフォーマンス**: 10MB 〜 1TB のデータ転送スループット計測。
+
+---
+
+## 📝 スペック詳細
+- **暗号化**: 12,000桁（40,000ビット）マスターキー ＋ AES-GCM 1KBセル。
+- **ネットワーク**: UDP-Accelerated P2P ＋ WebSocket Relay (WSS)。
+- **認証**: デバイスID、OS、時刻を組み合わせた AI コンテキストベース認証。
