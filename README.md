@@ -4,72 +4,57 @@ SFLN は、12,000桁暗号と 1GB/s ターゲットを両立させた次世代 P
 
 ---
 
-## 🛠️ 開発者向けリファレンス (サーバーアクセス方法)
+## 📱 クライアント・アプリケーション
 
-### 1. JavaScript SDK (ブラウザ)
-Web サイトから SFLN ネットワークに接続し、暗号化データを送受信します。
+一般利用者向けの多機能クライアントです。
 
-**接続コード例:**
+### 1. デスクトップ GUI 版 (Win / Linux / Mac)
+QRコードによる簡単なデバイス連携が可能です。
+- **Dashboard**: ワンクリックで接続。
+- **Pairing**: 自分の Node ID を QR コードで表示。相手の ID を入力して「ペアリング」することで、セキュアな直接ファイル送信が可能になります。
+- **Security**: アプリやドメインごとの除外設定。
+
+### 2. 高性能 CUI 版 (Win Server / Linux Server)
+サーバー環境での 24/7 稼働に特化した軽量・高効率クライアントです。
+
+---
+
+## 🛠️ ライブラリの役割とユースケース
+
+SFLN SDK は、既存のシステムに「最強の暗号化」と「自律型ネットワーク」を組み込むために設計されています。
+
+### 💡 なにに使えるの？ (ユースケース)
+1. **機密情報の超高速共有**:
+   - 12,000桁暗号により、機密性の高い設計図や金融データ（GB級）を、既存のインターネットを経由せずに（またはリレーして）安全に転送。
+2. **Web ベースのセキュアチャット/コラボツール**:
+   - `JS SDK` を Web ページに埋め込むだけで、サーバーに一切の情報を残さない「完全秘匿型の P2P 通信」を実現。
+3. **IoT デバイスのセキュア制御**:
+   - `Python SDK` を使い、外出先から自宅・工場の機器を暗号化メッシュ経由で安全に操作（VPN 設定不要）。
+4. **検閲耐性のあるインフラ**:
+   - 中央サーバーに頼らない自己増殖型ネットワークにより、通信の遮断が困難なネットワークを構築。
+
+---
+
+## 🚀 開発者向けリファレンス
+
+### JavaScript SDK
 ```javascript
-// ライブラリのインポート (js-library/sfln.js)
 const client = new SFLNClientJS();
-
-// サーバーに接続 (WebSocket経由)
 await client.connect('wss://sfln-server.pdg.f5.si');
-
-// データ受信時のハンドラ
-client.onMessage = (data, senderId) => {
-    console.log(`Node ${senderId} から受信:`, data);
-};
-
-// 相手の ID を指定してデータを送信 (自動 12,000桁暗号化)
-await client.send(new Uint8Array([1,2,3]), "TARGET_NODE_ID");
+client.onMessage = (data, senderId) => { /* 復号済みデータの受信処理 */ };
+await client.send(uint8ArrayData, "TARGET_ID");
 ```
 
-### 2. Python SDK (ネイティブ)
-アプリケーションのバックエンドとして SFLN を利用します。
-
-**接続コード例:**
+### Python SDK
 ```python
 from sfln.python_library.sdk import SFLNSDK
-import asyncio
-
-async def main():
-    sdk = SFLNSDK()
-
-    # サーバー(Backbone)のアドレスを指定して接続
-    # UDP ポート 9000 を使用します
-    await sdk.connect([("sfln-server.pdg.f5.si", 9000)])
-
-    # 相手ノード ID を指定してセキュア送信
-    await sdk.send(b"Top Secret Data", "TARGET_NODE_ID")
-
-asyncio.run(main())
+sdk = SFLNSDK()
+await sdk.connect([("sfln-server.pdg.f5.si", 9000)])
+await sdk.send(b"Secret", "TARGET_ID")
 ```
 
 ---
 
-## 📱 クライアント・アプリケーション (バイナリ)
-
-以下の 6 種類の最新版は公式サイト (`index.html`) からいつでもダウンロード可能です。
-
-1. **Desktop GUI**: Win / Linux / Mac (PySide6 インターフェース)
-2. **Server CUI**: Win Server / Linux Server (CUI 最適化、最高効率)
-3. **Mobile**: Android (Beta APK)
-
----
-
-## 🚀 システム自動化 (GitHub Actions)
-
-### 自動ビルド & 公開 (`sfln-build.yml`)
-コード更新時に全 6 種のバイナリを自動ビルドし、`client-apps/` への公開と `index.html` のリンク更新を完結させます。
-
-### 自動テスト (`sfln-ci.yml`)
-- **1TB 転送計測**: 大容量ストリーミングのスループット検証。
-- **カオステスト**: AI ルーティングの動的な経路選択の正確性。
-- **負荷テスト**: 100クライアント以上の同時処理。
-
----
-
-## 📝 サーバーの運用について
-リレーサーバーの構築・詳細な運用手順については **[SERVER.md](SERVER.md)** を参照してください。
+## 📝 運用と自動化
+- **サーバー運用**: 詳細な手順は **[SERVER.md](SERVER.md)** を参照。
+- **自動ビルド**: GitHub Actions により、常に最新のバイナリが公式サイト (`index.html`) から提供されます。
