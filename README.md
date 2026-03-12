@@ -1,63 +1,75 @@
-# SFLN (Secure-Fast-Locking-Network)
+# SFLN (Secure-Fast-Locking-Network) 開発・利用ガイド
 
-SFLN は、究極のセキュリティ（12,000桁暗号）と圧倒的な速度（1GB/s ターゲット）を両立させた次世代 P2P メッシュネットワーク規格です。
-
----
-
-## 📱 クライアント・アプリケーション (利用者向け)
-
-一般利用者やシステム管理者が SFLN ネットワークに参加し、安全な通信を確立するためのアプリです。
-
-### 1. デスクトップ GUI 版 (Windows / Linux / macOS)
-直感的なインターフェースで SFLN を制御できます。
-- **Dashboard**: ワンクリックで SFLN メッシュネットワークに接続。
-- **Excluded Apps**: 特定のアプリ（銀行アプリやゲーム等）を SFLN の保護から除外し、低遅延で直接通信させる設定。
-- **Excluded Sites**: 特定のドメインをバイパスさせるリスト管理。
-
-### 2. 高性能 CUI 版 (Windows Server / Linux Server)
-サーバー環境に最適化された GUI なしの軽量クライアントです。
-- **役割**: 24時間365日の安定稼働と、バックボーン・リレー・ノードとしての高速通信。
-- **使い方**: 実行ファイル（SFLN-Server-...-CUI）をコマンドラインから起動。
-- **特徴**: 最小限のメモリ消費で 1GB/s の最大スループットを維持します。
+SFLN は、12,000桁暗号と 1GB/s ターゲットを両立させた次世代 P2P メッシュネットワークです。
 
 ---
 
-## 🛠️ 開発者向けライブラリ (SDK)
+## 🛠️ 開発者向けリファレンス (サーバーアクセス方法)
 
-独自のアプリケーションや Web サイトに SFLN の強力なセキュリティを組み込むためのライブラリです。
+### 1. JavaScript SDK (ブラウザ)
+Web サイトから SFLN ネットワークに接続し、暗号化データを送受信します。
 
-### 1. JavaScript SDK (Web サイト・ブラウザ向け)
-Web ブラウザ上で SFLN 通信を可能にします。
-- **役割**: 12,000桁暗号化をブラウザ内で完結させ、P2P スタイルのファイル転送を実現。
-- **使い方**: `sfln/js-library/sfln.js` を読み込み、数行のコードでセキュア接続。
-- **機能**: 1KB単位の自動チャンク分割・再構成・AES-GCM暗号化。
+**接続コード例:**
+```javascript
+// ライブラリのインポート (js-library/sfln.js)
+const client = new SFLNClientJS();
 
-### 2. Python SDK (ネイティブアプリ・ツール向け)
-Python プログラムに SFLN を統合します。
-- **役割**: ノード間の認証、AIルーティング、暗号化通信のバックエンド。
-- **使い方**: `from sfln.python_library.sdk import SFLNSDK` を使用。
+// サーバーに接続 (WebSocket経由)
+await client.connect('wss://sfln-server.pdg.f5.si');
+
+// データ受信時のハンドラ
+client.onMessage = (data, senderId) => {
+    console.log(`Node ${senderId} から受信:`, data);
+};
+
+// 相手の ID を指定してデータを送信 (自動 12,000桁暗号化)
+await client.send(new Uint8Array([1,2,3]), "TARGET_NODE_ID");
+```
+
+### 2. Python SDK (ネイティブ)
+アプリケーションのバックエンドとして SFLN を利用します。
+
+**接続コード例:**
+```python
+from sfln.python_library.sdk import SFLNSDK
+import asyncio
+
+async def main():
+    sdk = SFLNSDK()
+
+    # サーバー(Backbone)のアドレスを指定して接続
+    # UDP ポート 9000 を使用します
+    await sdk.connect([("sfln-server.pdg.f5.si", 9000)])
+
+    # 相手ノード ID を指定してセキュア送信
+    await sdk.send(b"Top Secret Data", "TARGET_NODE_ID")
+
+asyncio.run(main())
+```
 
 ---
 
-## 🚀 自動ビルド・テスト・配布システム
+## 📱 クライアント・アプリケーション (バイナリ)
 
-本リポジトリは GitHub Actions により完全に自動化されています。
+以下の 6 種類の最新版は公式サイト (`index.html`) からいつでもダウンロード可能です。
 
-### 自動配布 (CD)
-コードがプッシュされると `sfln-build.yml` が作動し、以下の6種類を自動ビルドして公式サイト (index.html) のダウンロードリンクを更新します：
-- **GUI版**: Windows, Linux, macOS
-- **CUI版**: Windows Server, Linux Server
-- **モバイル版**: Android (APK)
-
-### 自動テスト (CI)
-`sfln-ci.yml` により、以下の項目を常時検証しています：
-- **全機能テスト**: 暗号化、コンテキスト認証、AIルーティング。
-- **負荷テスト**: 100クライアント同時接続。
-- **パフォーマンス**: 10MB 〜 1TB のデータ転送スループット計測。
+1. **Desktop GUI**: Win / Linux / Mac (PySide6 インターフェース)
+2. **Server CUI**: Win Server / Linux Server (CUI 最適化、最高効率)
+3. **Mobile**: Android (Beta APK)
 
 ---
 
-## 📝 スペック詳細
-- **暗号化**: 12,000桁（40,000ビット）マスターキー ＋ AES-GCM 1KBセル。
-- **ネットワーク**: UDP-Accelerated P2P ＋ WebSocket Relay (WSS)。
-- **認証**: デバイスID、OS、時刻を組み合わせた AI コンテキストベース認証。
+## 🚀 システム自動化 (GitHub Actions)
+
+### 自動ビルド & 公開 (`sfln-build.yml`)
+コード更新時に全 6 種のバイナリを自動ビルドし、`client-apps/` への公開と `index.html` のリンク更新を完結させます。
+
+### 自動テスト (`sfln-ci.yml`)
+- **1TB 転送計測**: 大容量ストリーミングのスループット検証。
+- **カオステスト**: AI ルーティングの動的な経路選択の正確性。
+- **負荷テスト**: 100クライアント以上の同時処理。
+
+---
+
+## 📝 サーバーの運用について
+リレーサーバーの構築・詳細な運用手順については **[SERVER.md](SERVER.md)** を参照してください。
