@@ -1,0 +1,63 @@
+name: SFLN Manual Relay Server
+
+on:
+  workflow_dispatch:
+    inputs:
+      duration:
+        description: 'Server uptime duration (minutes)'
+        default: '60'
+        required: true
+
+jobs:
+  run-relay:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        pip install -r sfln/server/requirements.txt
+        # Install cloudflared
+        curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+        sudo dpkg -i cloudflared.deb
+
+    - name: Start Cloudflare Tunnel & SFLN Server
+      env:
+        SFLN_DDNS_TOKEN: ${{ secrets.SFLN_DDNS_TOKEN }}
+      run: |
+        # 1. Start SFLN Server in background
+        python3 sfln/server/main.py > server.log 2>&1 &
+
+        # 2. Start Cloudflare Tunnel (Quick Tunnel for Demo)
+        # In a real production, use a persistent tunnel with a token
+        cloudflared tunnel --url http://localhost:9001 > tunnel.log 2>&1 &
+
+        echo "Waiting for tunnel to stabilize..."
+        sleep 15
+
+        # 3. Extract Tunnel URL
+        TUNNEL_URL=$(grep -o 'https://[a-zA-Z0-9.-]*\.trycloudflare\.com' tunnel.log | head -n 1)
+        echo "Tunnel URL: $TUNNEL_URL"
+
+        if [ -z "$TUNNEL_URL" ]; then
+          echo "Failed to get Tunnel URL"
+          cat tunnel.log
+          exit 1
+        fi
+
+        # 4. Update DDNS (CNAME)
+        # Note: sfln-server.pdg is the domain part
+        CLEAN_URL=$(echo $TUNNEL_URL | sed 's/https:\/\///')
+        python3 sfln/server/ddns_update.py sfln-server.pdg cname $CLEAN_URL
+
+        echo "SFLN Server is now live at sfln-server.pdg.f5.si -> $TUNNEL_URL"
+        echo "Uptime: ${{ github.event.inputs.duration }} minutes"
+
+        # 5. Keep alive
+        sleep $(( ${{ github.event.inputs.duration }} * 60 ))
+
+        echo "Shutting down..."

@@ -86,7 +86,7 @@ class SFLNClientJS {
             // Attempt to hit the local health server on port 49000
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 1000);
-            const response = await fetch('http://localhost:49000/health', { signal: controller.signal });
+            const response = await fetch('http://localhost:49000/status', { signal: controller.signal });
             clearTimeout(timeoutId);
             this.isVerified = response.ok;
         } catch (e) {

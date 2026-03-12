@@ -22,7 +22,8 @@ class SFLNSDK:
         """
         async with aiohttp.ClientSession() as session:
             try:
-                async with session.get('http://localhost:49000/health', timeout=1) as response:
+                # Fixed to match gui.py's /status path
+                async with session.get('http://localhost:49000/status', timeout=1) as response:
                     self.is_verified = (response.status == 200)
             except:
                 self.is_verified = False

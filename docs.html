@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>開発者ドキュメント - SFLN 公式サイト</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .docs-container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        .sidebar {
+            position: sticky;
+            top: 100px;
+            height: fit-content;
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+        .sidebar li {
+            margin-bottom: 0.5rem;
+        }
+        .sidebar a {
+            color: var(--secondary-text-color);
+            display: block;
+            padding: 0.5rem;
+            border-radius: 4px;
+        }
+        .sidebar a:hover {
+            background: var(--card-bg-color);
+            color: var(--accent-color);
+        }
+        .sidebar a.active {
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+        .content section {
+            padding: 2rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .content section:last-child {
+            border-bottom: none;
+        }
+        pre {
+            background: #000;
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            margin: 1rem 0;
+        }
+        code {
+            font-family: 'Courier New', Courier, monospace;
+            color: #d1d5db;
+        }
+        .keyword { color: #ff7b72; }
+        .function { color: #d2a8ff; }
+        .string { color: #a5d6ff; }
+        .comment { color: #8b949e; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <a href="index.html" class="logo">SFLN</a>
+            <nav>
+                <ul>
+                    <li><a href="index.html#about">SFLNとは</a></li>
+                    <li><a href="demo.html">Demo</a></li>
+                    <li><a href="docs.html" class="active">Docs</a></li>
+                    <li><a href="index.html#download">ダウンロード</a></li>
+                    <li><a href="dev-news.html">開発ニュース</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="docs-container">
+            <aside class="sidebar">
+                <h3>目次</h3>
+                <ul>
+                    <li><a href="#overview">概要</a></li>
+                    <li><a href="#verification">SDK存在確認ロジック</a></li>
+                    <li><a href="#js-sdk">JavaScript SDK</a></li>
+                    <li><a href="#python-sdk">Python SDK</a></li>
+                    <li><a href="#architecture">アーキテクチャ</a></li>
+                    <li><a href="#use-cases">ユースケース</a></li>
+                </ul>
+            </aside>
+
+            <article class="content">
+                <h1>SFLN 開発者ドキュメント</h1>
+                <p>SFLN (Secure Fast Locking Network) をアプリケーションに統合するためのガイドです。</p>
+
+                <section id="overview">
+                    <h2>概要</h2>
+                    <p>SFLN SDK を使用することで、開発者は複雑な暗号化や P2P 経路制御を意識することなく、セキュアな高速通信機能をアプリに組み込むことができます。</p>
+                    <p>通信はローカルで動作する SFLN クライアント（デーモン）を介して行われ、12,000桁の独自暗号と 1KB 分割転送が自動的に適用されます。</p>
+                </section>
+
+                <section id="verification">
+                    <h2>SDK 存在確認ロジック (Verification Logic)</h2>
+                    <p>SDK は動作前に、ユーザーの環境に SFLN クライアントアプリがインストールされ、正しく実行されているかを確認する必要があります。</p>
+                    <p>SFLN クライアントは管理者権限で実行されると、ローカルホストの <strong>ポート 49000</strong> でヘルスチェック用サーバーを起動します。SDK はこのポートにリクエストを送り、応答を確認します。</p>
+                    <pre><code><span class="comment">// 内部的なチェックの流れ</span>
+<span class="keyword">async function</span> <span class="function">checkSFLN</span>() {
+    <span class="keyword">try</span> {
+        <span class="keyword">const</span> response = <span class="keyword">await</span> <span class="function">fetch</span>(<span class="string">'http://localhost:49000/status'</span>);
+        <span class="keyword">return</span> response.ok;
+    } <span class="keyword">catch</span> (e) {
+        <span class="keyword">return false</span>;
+    }
+}</code></pre>
+                </section>
+
+                <section id="js-sdk">
+                    <h2>JavaScript SDK</h2>
+                    <p>Webブラウザや Node.js 環境で利用可能です。デモページなどで実際に使用されています。</p>
+                    <h3>インストール</h3>
+                    <pre><code>npm install @sfln/sdk</code></pre>
+                    <h3>基本コード例</h3>
+                    <pre><code><span class="keyword">import</span> { SFLNClient } <span class="keyword">from</span> <span class="string">'@sfln/sdk'</span>;
+
+<span class="keyword">const</span> sfln = <span class="keyword">new</span> <span class="function">SFLNClient</span>();
+
+<span class="comment">// 存在確認と接続</span>
+<span class="keyword">if</span> (<span class="keyword">await</span> sfln.<span class="function">verifyPresence</span>()) {
+    <span class="keyword">await</span> sfln.<span class="function">connect</span>(<span class="string">'wss://sfln-server.pdg.f5.si'</span>);
+
+    <span class="comment">// データの送信 (1KB単位の分割と暗号化はSDKが自動処理)</span>
+    <span class="keyword">await</span> sfln.<span class="function">send</span>(<span class="string">"Hello, secure world!"</span>, <span class="string">"TARGET_NODE_ID"</span>);
+}</code></pre>
+                </section>
+
+                <section id="python-sdk">
+                    <h2>Python SDK</h2>
+                    <p>デスクトップアプリやサーバーサイドでの統合に最適です。</p>
+                    <h3>基本コード例</h3>
+                    <pre><code><span class="keyword">from</span> sfln.library <span class="keyword">import</span> SFLNLibrary
+
+sdk = <span class="function">SFLNLibrary</span>()
+
+<span class="comment"># クライアントアプリの起動確認</span>
+<span class="keyword">if</span> sdk.<span class="function">is_daemon_running</span>():
+    <span class="comment"># 大容量ファイルの転送 (自動分割 & 12,000桁暗号)</span>
+    sdk.<span class="function">send_file</span>(<span class="string">"large_data.zip"</span>, target_id=<span class="string">"XYZ-123"</span>)
+<span class="keyword">else</span>:
+    <span class="function">print</span>(<span class="string">"SFLN Client is not running."</span>)</code></pre>
+                </section>
+
+                <section id="architecture">
+                    <h2>アーキテクチャ</h2>
+                    <p>SFLN は「自律型メッシュ」と「中央リレー」のハイブリッド構成をとります。</p>
+                    <ul>
+                        <li><strong>Edge AI Routing:</strong> 各ノードがレイテンシを学習し、最短経路を選択。</li>
+                        <li><strong>AES-GCM-SFLN:</strong> 標準の AES-GCM に、動的な 12,000 桁のカスタムシードを組み合わせた独自暗号。</li>
+                        <li><strong>Self-Healing:</strong> 不安定なノードを自動検知し、瞬時に経路を切り替えます。</li>
+                    </ul>
+                </section>
+
+                <section id="use-cases">
+                    <h2>ユースケース</h2>
+                    <article class="feature-card">
+                        <h3>機密データ共有</h3>
+                        <p>法務・金融などの極めて高い秘匿性が求められる文書を、既存のクラウドを介さず直接相手に届けます。</p>
+                    </article>
+                    <article class="feature-card" style="margin-top: 1rem;">
+                        <h3>分散型バックアップ</h3>
+                        <p>データを細分化して複数の信頼できるノードに分散配置することで、災害時でもデータを復元可能にします。</p>
+                    </article>
+                    <article class="feature-card" style="margin-top: 1rem;">
+                        <h3>リモートメンテナンス</h3>
+                        <p>VPN を構築することなく、グローバル IP のない環境にある機器へ安全にアクセスし、制御コマンドを送受信します。</p>
+                    </article>
+                </section>
+            </article>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 SFLN Project. Management and Supervisory Officer PDG Development
+                <br>
+               Chief Administrative Officer: PDG Group AdminAll Rights Reserved.
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        // Simple scroll spy for sidebar
+        window.addEventListener('scroll', () => {
+            const sections = document.querySelectorAll('.content section');
+            const navLinks = document.querySelectorAll('.sidebar a');
+
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= sectionTop - 150) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href').includes(current)) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

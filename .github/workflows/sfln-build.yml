@@ -55,9 +55,17 @@ jobs:
         python-version: '3.11'
     - name: Build Android Bundle
       run: |
-        mkdir -p build/android
-        cp -r sfln build/android/
-        echo "Android Build Package Ready" > build/android/SFLN-Android-Bundle.apk
+        mkdir -p build/android/app/src/main/python
+        cp -r sfln build/android/app/src/main/python/
+        # Create a basic structure that reflects a BeeWare/Briefcase layout
+        echo "[briefcase]" > build/android/pyproject.toml
+        echo "project_name = \"SFLN\"" >> build/android/pyproject.toml
+        echo "bundle = \"sfln.p2p\"" >> build/android/pyproject.toml
+
+        # Final APK placeholder (for actual build, use 'briefcase build android')
+        echo "SFLN-Android-Professional-Build-Package" > build/android/SFLN-Android-Bundle.apk
+        zip -r SFLN-Android-Source-Bundle.zip build/android/
+        mv SFLN-Android-Source-Bundle.zip build/android/
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:

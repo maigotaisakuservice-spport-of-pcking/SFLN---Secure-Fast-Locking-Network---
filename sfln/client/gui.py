@@ -5,14 +5,16 @@ import uuid
 import qrcode
 import ctypes
 import platform
+import threading
 from io import BytesIO
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 # Ensure project root is in sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 from PySide6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout,
                              QPushButton, QTextEdit, QWidget, QListWidget,
-                             QLineEdit, QLabel, QTabWidget, QFileDialog, QSystemTrayIcon, QMenu)
+                             QLineEdit, QLabel, QTabWidget, QFileDialog, QSystemTrayIcon, QMenu, QStyle)
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QPixmap, QImage, QAction, QIcon
 from sfln.core import SFLNEngine
@@ -25,6 +27,20 @@ def is_admin():
             return os.getuid() == 0
     except:
         return False
+
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == '/status':
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(b'{"status": "ok", "version": "1.0.0"}')
+        else:
+            self.send_error(404)
+
+    def log_message(self, format, *args):
+        return
 
 class SFLNGUI(QMainWindow):
     def __init__(self):
@@ -125,7 +141,11 @@ class SFLNGUI(QMainWindow):
     def setup_tray(self):
         self.tray = QSystemTrayIcon(self)
         # Use a placeholder icon (In real app, use SFLN icon file)
-        self.tray.setIcon(self.style().standardIcon(self.style().SP_ComputerIcon))
+        try:
+            self.tray.setIcon(self.style().standardIcon(QStyle.SP_ComputerIcon))
+        except:
+            # Fallback if QStyle constant not directly available
+            pass
 
         menu = QMenu()
         show_action = menu.addAction("Show Console")
@@ -173,8 +193,16 @@ class SFLNGUI(QMainWindow):
             self.log("SFLN Protection Disabled.")
 
     def start_health_server(self):
-        # Starts a minimal local HTTP server on port 49000
-        # SDKs will hit this to verify if the app is running.
+        def run_server():
+            try:
+                server_address = ('127.0.0.1', 49000)
+                self.health_httpd = HTTPServer(server_address, HealthHandler)
+                self.health_httpd.serve_forever()
+            except Exception as e:
+                print(f"Health server error: {e}")
+
+        self.health_thread = threading.Thread(target=run_server, daemon=True)
+        self.health_thread.start()
         self.log("Local SFLN Verification Daemon active on port 49000.")
 
     def log(self, msg):
