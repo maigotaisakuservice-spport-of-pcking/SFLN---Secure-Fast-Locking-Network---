@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Secure Transfer Web - SFLN Demo</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        .service-ui { background: #fff; color: #333; min-height: 80vh; border-radius: 12px; display: flex; overflow: hidden; }
+        .sidebar-ui { width: 240px; background: #f8f9fa; border-right: 1px solid #ddd; padding: 20px; }
+        .main-ui { flex: 1; padding: 40px; }
+        .nav-item { padding: 12px; border-radius: 6px; cursor: pointer; margin-bottom: 5px; color: #555; }
+        .nav-item.active { background: #e7f3ff; color: #007bff; font-weight: bold; }
+        .drop-zone { border: 2px dashed #007bff; background: #f0f7ff; padding: 60px; text-align: center; border-radius: 12px; margin-top: 20px; }
+        .file-list { margin-top: 30px; }
+        .file-item { display: flex; justify-content: space-between; padding: 15px; border-bottom: 1px solid #eee; align-items: center; }
+        .badge-sfln { background: #58a6ff; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; }
+    </style>
+</head>
+<body style="background: #e9ecef;">
+    <div class="container" style="padding-top: 40px;">
+        <div class="service-ui">
+            <aside class="sidebar-ui">
+                <h2 style="color: #007bff; border: none; font-size: 1.5rem;">SFLN Cloud</h2>
+                <div class="nav-item active">ファイル転送</div>
+                <div class="nav-item">共有リンク</div>
+                <div class="nav-item">セキュリティ設定</div>
+            </aside>
+            <main class="main-ui">
+                <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                    <h3>セキュア転送</h3>
+                    <div style="font-size: 0.8rem;">ID: <code id="user-id">SFLN-JS-DEMO</code></div>
+                </header>
+
+                <div class="drop-zone">
+                    <p>ここにファイルをドラッグ＆ドロップ</p>
+                    <button class="cta-button" style="margin-top: 10px;">ファイルを選択</button>
+                    <p style="font-size: 0.75rem; color: #777; margin-top: 10px;">SFLN 12,000桁暗号により、サーバーを通さず直接相手に届きます。</p>
+                </div>
+
+                <div class="file-list">
+                    <h4>最近の転送</h4>
+                    <div class="file-item">
+                        <div>
+                            <strong>financial_report_2025.pdf</strong><br>
+                            <span style="font-size: 0.75rem; color: #999;">12.4 MB • 2分前</span>
+                        </div>
+                        <span class="badge-sfln">SFLN SECURE</span>
+                    </div>
+                    <div class="file-item">
+                        <div>
+                            <strong>contract_v2.docx</strong><br>
+                            <span style="font-size: 0.75rem; color: #999;">1.1 MB • 1時間前</span>
+                        </div>
+                        <span class="badge-sfln">SFLN SECURE</span>
+                    </div>
+                </div>
+            </main>
+        </div>
+        <p style="text-align: center; margin-top: 20px;"><a href="index.html">← Demo Hubに戻る</a></p>
+    </div>
+</body>
+</html>

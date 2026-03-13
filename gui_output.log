@@ -1,2 +1,0 @@
-qt.core.qobject.connect: QObject::connect: No such signal QPlatformNativeInterface::systemTrayWindowChanged(QScreen*)
-This plugin does not support propagateSizeHints()

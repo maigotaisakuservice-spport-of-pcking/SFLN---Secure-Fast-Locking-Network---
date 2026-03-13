@@ -3,6 +3,7 @@ import hashlib
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec
 
 class SFLNCrypto:
     """
@@ -19,6 +20,13 @@ class SFLNCrypto:
             self.master_key = master_key
         else:
             self.master_key = os.urandom(self.KEY_BITS // 8)
+        self.session_keys = {} # {peer_id: shared_secret}
+
+    def generate_session_keys(self):
+        """Proposal 2: Perfect Forward Secrecy using ECDH."""
+        private_key = ec.generate_private_key(ec.SECP256R1())
+        public_key = private_key.public_key()
+        return private_key, public_key
 
     @classmethod
     def generate_master_key(cls):

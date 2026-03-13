@@ -83,6 +83,12 @@ class SFLNRouter:
     def __init__(self):
         self.routes_metrics = {} # {peer: {path_type: {'lat': [], 'loss': []}}}
         self.path_types = ["direct", "turn", "backbone"]
+        # Proposal 3: Regional Relay Nodes
+        self.regional_backbones = {
+            "asia": "sfln-server.pdg.f5.si",
+            "us": "us-relay.sfln.network",
+            "eu": "eu-relay.sfln.network"
+        }
 
     def update_metrics(self, peer, path_type, latency, packet_loss=0.0):
         if peer not in self.routes_metrics:

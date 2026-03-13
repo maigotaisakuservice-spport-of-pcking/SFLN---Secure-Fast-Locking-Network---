@@ -125,8 +125,16 @@
                 <section id="js-sdk">
                     <h2>JavaScript SDK</h2>
                     <p>Webブラウザや Node.js 環境で利用可能です。デモページなどで実際に使用されています。</p>
-                    <h3>インストール</h3>
+
+                    <h3>1. ブラウザでの利用 (CDN/直接リンク)</h3>
+                    <p>HTMLに以下のスクリプトタグを追加するだけで、<code>SFLNClientJS</code> が利用可能になります。</p>
+                    <pre><code><span class="comment">&lt;!-- SFLN Library の読み込み --&gt;</span>
+<span class="keyword">&lt;script</span> <span class="keyword">src=</span><span class="string">"https://maigotaisakuservice-spport-of-pcking.github.io/SFLN---Secure-Fast-Locking-Network---/sfln/js-library/sfln.js"</span><span class="keyword">&gt;&lt;/script&gt;</span></code></pre>
+
+                    <h3>2. NPM での利用</h3>
+                    <p>モダンな開発環境では NPM パッケージとしてインストールできます。</p>
                     <pre><code>npm install @sfln/sdk</code></pre>
+
                     <h3>基本コード例</h3>
                     <pre><code><span class="keyword">import</span> { SFLNClient } <span class="keyword">from</span> <span class="string">'@sfln/sdk'</span>;
 
