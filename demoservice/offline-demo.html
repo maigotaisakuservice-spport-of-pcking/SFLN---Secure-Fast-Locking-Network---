@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SFLN - Offline Demo</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="../css/style.css">
     <!-- Load stable libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
@@ -24,14 +24,14 @@
 <body>
     <header>
         <div class="container">
-            <a href="index.html" class="logo">SFLN</a>
+            <a href="../index.html" class="logo">SFLN</a>
             <nav>
                 <ul>
-                    <li><a href="index.html#about">SFLNとは</a></li>
-                    <li><a href="demo.html" class="active">Demo</a></li>
-                    <li><a href="docs.html">Docs</a></li>
-                    <li><a href="index.html#download">ダウンロード</a></li>
-                    <li><a href="dev-news.html">開発ニュース</a></li>
+                    <li><a href="../index.html#about">SFLNとは</a></li>
+                    <li><a href="index.html" class="active">Demo Hub</a></li>
+                    <li><a href="../docs.html">Docs</a></li>
+                    <li><a href="../index.html#download">ダウンロード</a></li>
+                    <li><a href="../dev-news.html">開発ニュース</a></li>
                 </ul>
             </nav>
         </div>
@@ -81,9 +81,9 @@
             document.write('<script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"><\/script>');
         }
     </script>
-    <script src="sfln/js-library/sfln.js"></script>
+    <script src="../sfln/js-library/sfln.js"></script>
     <script>
-        const bc = new BroadcastChannel('sfln_secure_bridge');
+        const bc = new BroadcastChannel('sfln_mesh_v2');
         let client;
 
         function log(msg) {
@@ -130,12 +130,14 @@
             status.innerText = "12,000桁暗号を適用中...";
 
             // Simulate progress
-            for (let i = 0; i <= 100; i += 5) {
+            for (let i = 0; i <= 100; i += 10) {
                 bar.style.width = i + "%";
+                bc.postMessage({ type: 'CHUNK', from: client.nodeId, progress: i });
                 await new Promise(r => setTimeout(r, 30));
             }
 
             bc.postMessage({
+                type: 'END',
                 from: client.nodeId,
                 size: file.size,
                 name: file.name

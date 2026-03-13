@@ -33,7 +33,7 @@
                     <strong>Edge-Node-01 (Smart Factory)</strong><br>
                     <span style="font-size: 0.8rem; color: #888;">ID: 7f82-a9b1-sfln</span>
                 </div>
-                <button class="cta-button" style="padding: 5px 15px;">コマンド送信</button>
+                <button class="cta-button" style="padding: 5px 15px;" py-click="on_click_reboot">コマンド送信</button>
             </div>
             <div class="device">
                 <div class="status-dot status-online"></div>
@@ -41,7 +41,7 @@
                     <strong>Security-Cam-04</strong><br>
                     <span style="font-size: 0.8rem; color: #888;">ID: e2d1-f4c5-sfln</span>
                 </div>
-                <button class="cta-button" style="padding: 5px 15px;">ライブ映像</button>
+                <button class="cta-button" style="padding: 5px 15px;" py-click="on_click_live">ライブ映像</button>
             </div>
         </div>
 
@@ -52,19 +52,40 @@
 
         <script type="py">
             import sys
-            from pyscript import display
+            import js
+            from pyscript import display, window
 
-            # Simulated SFLN SDK in PyScript
+            # Simulated SFLN SDK in PyScript with JS Interop
             class SFLNSDKDemo:
                 def __init__(self):
                     self.status = "CONNECTED"
+                    self.bc = js.BroadcastChannel.new('sfln_mesh_v2')
+                    self.bc.onmessage = self.handle_message
+
+                def handle_message(self, event):
+                    data = event.data
+                    display(f"[SFLN-P] Received message from {data.from_}: {data.type}", target="terminal-out", append=True)
 
                 def send_command(self, target, cmd):
+                    msg = js.Object.new()
+                    msg.type = "CONTROL"
+                    msg.cmd = cmd
+                    msg.target = target
+                    msg.from_ = "PY-CONTROLLER"
+                    self.bc.postMessage(msg)
                     return f"Encrypted Command '{cmd}' sent to {target} via SFLN-P."
 
             sdk = SFLNSDKDemo()
             display(f"> SFLN Python SDK {sdk.status}", target="py-status")
-            display(f"> {sdk.send_command('Edge-Node-01', 'REBOOT')}", target="terminal-out", append=True)
+
+            def on_click_reboot(event):
+                display(f"> {sdk.send_command('Edge-Node-01', 'REBOOT')}", target="terminal-out", append=True)
+
+            def on_click_live(event):
+                display(f"> {sdk.send_command('Security-Cam-04', 'VIEW_LIVE')}", target="terminal-out", append=True)
+
+            # Bind to existing buttons in next step or use manual triggers
+            display("> Waiting for operator commands...", target="terminal-out", append=True)
         </script>
 
         <p style="margin-top: 20px;"><a href="index.html">← Demo Hubに戻る</a></p>

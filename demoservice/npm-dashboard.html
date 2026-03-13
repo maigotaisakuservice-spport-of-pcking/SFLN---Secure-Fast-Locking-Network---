@@ -63,24 +63,58 @@
     </div>
 
     <script>
+        const bc = new BroadcastChannel('sfln_mesh_v2');
+        const logContainer = document.getElementById('log');
+
         const ctx = document.getElementById('trafficChart').getContext('2d');
-        new Chart(ctx, {
+        const chart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: ['10:00', '10:10', '10:20', '10:30', '10:40', '10:50'],
+                labels: Array(20).fill(''),
                 datasets: [{
-                    label: 'SFLN Traffic (Gbps)',
-                    data: [4.2, 5.1, 4.8, 8.2, 7.5, 9.1],
+                    label: 'SFLN Mesh Traffic (Gbps)',
+                    data: Array(20).fill(0),
                     borderColor: '#58a6ff',
+                    backgroundColor: 'rgba(88,166,255,0.1)',
+                    fill: true,
                     tension: 0.4
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: { duration: 0 },
                 scales: { y: { beginAtZero: true, grid: { color: '#333' } }, x: { grid: { color: '#333' } } }
             }
         });
+
+        function addLog(msg) {
+            const div = document.createElement('div');
+            div.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            logContainer.prepend(div);
+            if (logContainer.childNodes.length > 50) logContainer.removeChild(logContainer.lastChild);
+        }
+
+        bc.onmessage = (ev) => {
+            const data = ev.data;
+            addLog(`Traffic detected: ${data.type} from ${data.from || 'anonymous'}`);
+
+            // Spike traffic on chart
+            const newData = [...chart.data.datasets[0].data];
+            newData.shift();
+            newData.push(5 + Math.random() * 5);
+            chart.data.datasets[0].data = newData;
+            chart.update();
+        };
+
+        // Background jitter
+        setInterval(() => {
+            const newData = [...chart.data.datasets[0].data];
+            newData.shift();
+            newData.push(1 + Math.random() * 2);
+            chart.data.datasets[0].data = newData;
+            chart.update();
+        }, 2000);
     </script>
 </body>
 </html>

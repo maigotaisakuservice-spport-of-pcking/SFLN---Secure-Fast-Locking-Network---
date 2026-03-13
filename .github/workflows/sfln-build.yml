@@ -22,7 +22,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install PySide6 psutil cryptography pyinstaller websockets qrcode Pillow aiohttp
+        pip install PySide6 psutil cryptography pyinstaller websockets qrcode Pillow aiohttp keyring
 
     - name: Build Application (GUI)
       shell: bash
