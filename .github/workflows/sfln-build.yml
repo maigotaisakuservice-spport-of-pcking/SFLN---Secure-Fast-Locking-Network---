@@ -22,9 +22,10 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install PySide6 psutil cryptography pyinstaller websockets qrcode Pillow
+        pip install PySide6 psutil cryptography pyinstaller websockets qrcode Pillow aiohttp
 
     - name: Build Application (GUI)
+      shell: bash
       run: |
         # Use --uac-admin for Windows to request privileges
         # Use --paths . for package resolution
@@ -35,6 +36,7 @@ jobs:
         fi
 
     - name: Build Optimized CUI (Server Mode)
+      shell: bash
       run: |
         pyinstaller --console --onefile --name SFLN-Server-${{ matrix.os }}-CUI --paths . sfln/server/cli.py
 
