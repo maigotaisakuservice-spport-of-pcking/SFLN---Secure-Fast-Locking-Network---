@@ -24,7 +24,25 @@ SFLN サーバーを運用する場合、**VPS (Virtual Private Server)** の利
 | 設定難易度 | 中程度 | 低い |
 | 主な用途 | SFLN リレー/アプリサーバー | Webサイト/ブログ |
 
-## 3. インストールとセットアップ
+## 3. VPS が契約できない場合の代替案 (自宅 PC 運用)
+
+VPS の契約が難しい場合、**自宅の PC をサーバー化して Cloudflare Tunnel で公開する** 方法がもっとも簡単で強力です。
+
+### 3.1. 自宅 PC + Cloudflare Tunnel (無料)
+GitHub Actions で使用している技術を自宅でも活用できます。
+1. **サーバー起動**: 自分の PC で `python sfln/server/main.py` を実行。
+2. **Cloudflared インストール**: [Cloudflare 公式](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/install-run/)からバイナリをダウンロード。
+3. **トンネルの作成**: `cloudflared tunnel --url http://localhost:9001` を実行。
+4. **ドメイン連携**: 発行された `trycloudflare.com` の URL を `f5.si` の CNAME に登録すれば完了です。
+   - ※ ルーターのポート開放や固定 IP は一切不要です。
+   - **一括起動スクリプト**: `python sfln/server/home_host.py` を実行すると、サーバーの起動とトンネルの確立を一度に行い、公開URLを表示します。
+
+### 3.2. 無料クラウド枠の活用
+以下のサービスには、クレジットカード登録が必要ですが、一生無料で使える VPS 枠があります。
+- **Oracle Cloud (Always Free)**: ARM 4コア / 24GB メモリ。SFLN サーバーを動かすには十分すぎるスペックです。
+- **Google Cloud (Always Free)**: e2-micro インスタンス。性能は低いですが、リレー用には使えます。
+
+## 4. インストールとセットアップ
 
 ### 依存関係のインストール
 ```bash
@@ -40,7 +58,7 @@ python3 sfln/server/main.py
 python3 sfln/server/main.py --log-level DEBUG
 ```
 
-## 4. 運用に関する詳細
+## 5. 運用に関する詳細
 
 ### ハイブリッド・リレー機能
 このサーバーは、ネイティブアプリ用の **UDP (Port 9000)** と、ブラウザ用の **WebSocket (Port 9001)** の両方を同時に待ち受けます。異なるプロトコル間の通信も自動的にブリッジされます。
