@@ -109,6 +109,9 @@ jobs:
       run: |
         git config --global user.name "SFLN Build Bot"
         git config --global user.email "build-bot@sfln.p2p"
-        git add client-apps/ index.html
+        # Force add client-apps just in case of weird gitignore interactions
+        git add -f client-apps/
+        git add index.html
         git commit -m "chore: deploy latest builds (admin/tray enabled) [skip ci]" || echo "No changes"
-        git push origin main || echo "Push failed"
+        # Push to the current branch that triggered the workflow
+        git push origin HEAD:${{ github.ref }} || echo "Push failed"
