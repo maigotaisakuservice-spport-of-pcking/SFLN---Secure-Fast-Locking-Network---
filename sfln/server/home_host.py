@@ -4,9 +4,16 @@ import time
 import sys
 
 def run_home_server():
-    print("--- SFLN Home Hosting Assistant ---")
-    print("This script helps you safely host an SFLN relay from home.")
-    print("Using this method is TOS-compliant and secure (uses Cloudflare Tunnel).")
+    print("===============================================")
+    print("   SFLN Home Hosting Assistant (Easy Mode)     ")
+    print("===============================================")
+    print("VPSや難しい設定は不要です！このスクリプトだけで、")
+    print("あなたのPCを世界中からアクセス可能なリレーサーバーにできます。")
+    print("-----------------------------------------------")
+    print("[✓] GitHub規約に違反しません（TOS準拠）")
+    print("[✓] ルーターのポート開放設定は不要です")
+    print("[✓] Cloudflareによる強力なセキュリティ保護付き")
+    print("-----------------------------------------------")
 
     # 1. Start SFLN Server in background
     print("> Starting SFLN Server...")
@@ -31,10 +38,11 @@ def run_home_server():
                                      stderr=subprocess.STDOUT,
                                      text=True)
 
-    print("\n--- ACTION REQUIRED ---")
-    print("Wait for the 'trycloudflare.com' link to appear below.")
-    print("Copy that link and update your f5.si CNAME record.")
-    print("------------------------\n")
+    print("\n--- 次のステップ ---")
+    print("1. 下に 'trycloudflare.com' を含むリンクが表示されるまで待ってください。")
+    print("2. そのリンクをコピーして、f5.si の CNAME レコードに貼り付けてください。")
+    print("3. これで、あなたのサーバーが世界中に公開されます！")
+    print("-----------------------------------------------\n")
 
     try:
         while True:
