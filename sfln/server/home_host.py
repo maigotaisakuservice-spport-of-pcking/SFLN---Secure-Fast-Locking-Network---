@@ -5,7 +5,8 @@ import sys
 
 def run_home_server():
     print("--- SFLN Home Hosting Assistant ---")
-    print("This script will help you start the server and expose it via Cloudflare.")
+    print("This script helps you safely host an SFLN relay from home.")
+    print("Using this method is TOS-compliant and secure (uses Cloudflare Tunnel).")
 
     # 1. Start SFLN Server in background
     print("> Starting SFLN Server...")

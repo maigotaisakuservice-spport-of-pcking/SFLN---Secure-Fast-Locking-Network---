@@ -1,4 +1,8 @@
-name: SFLN Manual Relay Server
+# WARNING: This workflow is for FUNCTIONAL VERIFICATION and SHORT-TERM DEMO purposes ONLY.
+# Using GitHub Actions as a persistent relay server violates GitHub's Terms of Service.
+# For production hosting, please use a VPS or the sfln/server/home_host.py script.
+
+name: SFLN Manual Relay Server (Short-term Test Only)
 
 on:
   workflow_dispatch:
