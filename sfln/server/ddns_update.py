@@ -42,8 +42,8 @@ if __name__ == "__main__":
         print("Usage: python3 ddns_update.py <sub.user> [record_type] [value]")
         sys.exit(1)
 
-    domain = sys.argv[1]
-    token = os.environ.get("SFLN_DDNS_TOKEN")
+    domain = sfln-server.pdg.f5.si
+    token = 2d4a704921a716d36bd7dfa3a3d8d74e
 
     if not token:
         logger.error("SFLN_DDNS_TOKEN environment variable not set.")
