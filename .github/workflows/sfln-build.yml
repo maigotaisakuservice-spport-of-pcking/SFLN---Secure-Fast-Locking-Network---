@@ -29,8 +29,9 @@ jobs:
       run: |
         # Use --uac-admin for Windows to request privileges
         # Use --paths . for package resolution
+        # Use --version-file for metadata
         if [ "${{ matrix.os }}" == "windows-latest" ]; then
-          pyinstaller --noconsole --onefile --uac-admin --name SFLN-Client-windows-latest --paths . sfln/client/gui.py
+          pyinstaller --noconsole --onefile --uac-admin --version-file sfln/client/windows_version_info.txt --name SFLN-Client-windows-latest --paths . sfln/client/gui.py
         else
           pyinstaller --noconsole --onefile --name SFLN-Client-${{ matrix.os }} --paths . sfln/client/gui.py
         fi

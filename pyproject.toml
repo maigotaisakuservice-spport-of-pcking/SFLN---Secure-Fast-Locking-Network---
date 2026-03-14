@@ -3,12 +3,12 @@ project_name = "SFLN"
 bundle = "si.f5.pdg"
 version = "1.0.0"
 url = "https://sfln-server.pdg.f5.si"
-author = "SFLN Team"
-author_email = "team@sfln.p2p"
+author = "TekipakiPC"
+author_email = "tekipakipc@f5.si"
 
 [tool.briefcase.app.sfln]
 formal_name = "SFLN Client"
-description = "Secure Fast Locking Network Client"
+description = "Secure Fast Locking Network Client by TekipakiPC"
 icon = "resources/sfln"
 sources = ["sfln"]
 requires = ["cryptography", "websockets"]
