@@ -115,6 +115,8 @@ jobs:
         # Force add client-apps just in case of weird gitignore interactions
         git add -f client-apps/
         git add index.html
-        git commit -m "chore: deploy latest builds (admin/tray enabled) [skip ci]" || echo "No changes"
+        # Sync removals
+        git add -u demoservice/
+        git commit -m "chore: deploy latest builds and cleanup (admin/tray enabled) [skip ci]" || echo "No changes"
         # Push to the current branch that triggered the workflow
         git push origin HEAD:${{ github.ref }} || echo "Push failed"
