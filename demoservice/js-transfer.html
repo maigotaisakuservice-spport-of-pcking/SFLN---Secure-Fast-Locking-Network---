@@ -17,33 +17,43 @@
         .badge-sfln { background: #58a6ff; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; }
     </style>
 </head>
-<body style="background: #e9ecef;">
+<body style="background: var(--bg-color);">
     <div class="container" style="padding-top: 40px;">
-        <div class="service-ui">
-            <aside class="sidebar-ui">
-                <h2 style="color: #007bff; border: none; font-size: 1.5rem;">SFLN Cloud</h2>
-                <div class="nav-item active">ファイル転送</div>
-                <div class="nav-item">共有リンク</div>
-                <div class="nav-item">セキュリティ設定</div>
+        <div class="service-ui" style="background: #161b22; color: #c9d1d9; border: 1px solid #30363d;">
+            <aside class="sidebar-ui" style="background: #0d1117; border-right: 1px solid #30363d;">
+                <h2 style="color: #58a6ff; border: none; font-size: 1.5rem;">SFLN Transfer</h2>
+                <div class="nav-item active" style="background: rgba(88, 166, 255, 0.1); color: #58a6ff;">ファイル転送</div>
+                <div class="nav-item" style="color: #8b949e;">共有リンク</div>
+                <div class="nav-item" style="color: #8b949e;">設定</div>
+
+                <div style="margin-top: 100px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px; font-size: 0.8rem;">
+                    <p style="color: #8b949e;">保護ステータス:</p>
+                    <p style="color: #2ea043; font-weight: bold;">● セキュアメッシュ稼働中</p>
+                </div>
             </aside>
             <main class="main-ui">
                 <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-                    <h3>セキュア転送</h3>
+                    <h3>SFLN 公式転送サービス</h3>
                     <div style="display: flex; align-items: center; gap: 15px;">
                         <div id="qrcode-small" style="background: white; padding: 5px; border-radius: 4px;"></div>
-                        <div style="font-size: 0.8rem;">ID: <code id="user-id">Initializing...</code></div>
+                        <div style="font-size: 0.8rem; color: #8b949e;">My Node: <code id="user-id" style="color: #58a6ff;">Initializing...</code></div>
                     </div>
                 </header>
 
                 <div id="setup-view">
-                    <h4>接続相手のペアリング</h4>
-                    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd;">
-                        <p style="font-size: 0.85rem; color: #555;">他のタブを開いて、そこに表示されるIDを入力するか、QRコードでリンクしてください。</p>
-                        <div style="display: flex; gap: 10px; margin-top: 10px;">
-                            <input type="text" id="target-id" placeholder="相手のノードIDを入力" style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
-                            <button class="cta-button" onclick="pairNode()" style="padding: 5px 15px;">ペアリング</button>
+                    <h4>接続先ノードを選択</h4>
+                    <div style="background: #0d1117; padding: 25px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #30363d;">
+                        <p style="font-size: 0.85rem; color: #8b949e; margin-bottom: 15px;">同じLAN内のユーザーは自動的に検知されます。または、相手のIDを直接入力してください。</p>
+
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="target-id" placeholder="Node ID または SFLN Link を入力" style="flex: 1; padding: 12px; border-radius: 6px; border: 1px solid #30363d; background: #161b22; color: #f0f6fc;">
+                            <button class="cta-button" onclick="pairNode()">接続</button>
                         </div>
-                        <button class="cta-button" style="background: #6c757d; margin-top: 10px;" onclick="window.open(window.location.href, '_blank')">新しいタブで自分と通信する</button>
+
+                        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #30363d;">
+                            <p style="font-size: 0.75rem; color: #8b949e; margin-bottom: 10px;">クイックテスト:</p>
+                            <button class="cta-button" style="background: transparent; border: 1px solid #30363d; color: #c9d1d9; font-size: 0.8rem;" onclick="window.open(window.location.href, '_blank')">自分と通信する（テスト用タブを開く）</button>
+                        </div>
                     </div>
                 </div>
 
@@ -81,7 +91,7 @@
                 </div>
             </main>
         </div>
-        <p style="text-align: center; margin-top: 20px;"><a href="index.html">← Demo Hubに戻る</a></p>
+        <p style="text-align: center; margin-top: 20px;"><a href="../index.html">← 公式サイトに戻る</a></p>
     </div>
 
     <script src="../sfln/js-library/sfln.js"></script>

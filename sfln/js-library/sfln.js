@@ -172,6 +172,21 @@ class SFLNClientJS {
         const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
         return `${hex.substr(0,8)}-${hex.substr(8,4)}-${hex.substr(12,4)}-${hex.substr(16,4)}-${hex.substr(20)}`;
     }
+
+    /**
+     * SFLN Link / Deep Link Parser (Idea 1 & 9)
+     */
+    parseSflnLink(url) {
+        try {
+            const hash = url.split('#')[1] || url.split('?id=')[1];
+            if (!hash) return null;
+            // Simplified: Expect Base64 or just Node ID
+            const data = atob(hash);
+            return JSON.parse(data); // Returns {node_id, pubkey, etc}
+        } catch (e) {
+            return { node_id: url.split('#')[1] };
+        }
+    }
 }
 
 if (typeof module !== 'undefined') module.exports = { SFLNCryptoJS, SFLNClientJS };

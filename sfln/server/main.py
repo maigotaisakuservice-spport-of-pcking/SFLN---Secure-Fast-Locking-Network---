@@ -22,9 +22,17 @@ class SFLNServer:
         logging.basicConfig(level=log_level, format='%(asctime)s [%(levelname)s] %(message)s')
 
     async def start(self):
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print("┌" + "─"*70 + "┐")
+        print(f"│ SFLN Backbone Relay Server - v1.0.0 {' '*31} │")
+        print(f"│ Author: TekipakiPC {' '*49} │")
+        print("├" + "─"*70 + "┤")
+        print(f"│ UDP: 0.0.0.0:{self.port} {' '*49} │")
+        print(f"│ WebSocket: 0.0.0.0:{self.ws_port} {' '*41} │")
+        print(f"│ Status: [LISTENING] Ready for Mesh Connections {' '*19} │")
+        print("└" + "─"*70 + "┘")
+
         self.logger.info(f"SFLN Professional Server starting...")
-        self.logger.info(f"UDP Listen on 0.0.0.0:{self.port}")
-        self.logger.info(f"WS Listen on 0.0.0.0:{self.ws_port}")
 
         loop = asyncio.get_running_loop()
         try:

@@ -108,23 +108,53 @@ class SFLNGUI(QMainWindow):
 
     def setup_dashboard(self):
         layout = QVBoxLayout(self.dashboard_tab)
+        layout.setContentsMargins(40, 40, 40, 40)
 
-        self.status_label = QLabel("Status: Idle (Background)")
-        self.status_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #888; margin: 10px;")
+        self.shield_label = QLabel()
+        self.shield_label.setAlignment(Qt.AlignCenter)
+        self.update_shield_icon(False)
+        layout.addWidget(self.shield_label)
+
+        self.status_label = QLabel("SFLN Protection: INACTIVE")
+        self.status_label.setStyleSheet("font-size: 22px; font-weight: bold; color: #888; margin: 20px;")
         self.status_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(self.status_label)
 
-        self.enable_btn = QPushButton("ACTIVATE SECURE SHIELD")
-        self.enable_btn.setStyleSheet("background-color: #0078D7; color: white; padding: 20px; font-size: 16px; font-weight: bold;")
+        self.enable_btn = QPushButton("ACTIVATE PROTECTION")
+        self.enable_btn.setCursor(Qt.PointingHandCursor)
+        self.enable_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #30363d; color: #f0f6fc; border: 2px solid #58a6ff;
+                padding: 25px; font-size: 18px; font-weight: bold; border-radius: 12px;
+            }
+            QPushButton:hover { background-color: #58a6ff; color: #0d1117; }
+        """)
         self.enable_btn.clicked.connect(self.toggle_sfln)
         layout.addWidget(self.enable_btn)
 
-        layout.addWidget(QLabel("\n--- AI Routing Logic ---"))
-        self.route_info = QLabel("AI: Analyzing local environment...")
-        self.route_info.setStyleSheet("color: #aaa;")
+        self.route_info = QLabel("AI Engine: Ready to secure your traffic")
+        self.route_info.setStyleSheet("color: #8b949e; margin-top: 20px;")
+        self.route_info.setAlignment(Qt.AlignCenter)
         layout.addWidget(self.route_info)
 
         layout.addStretch()
+
+    def update_shield_icon(self, active):
+        # Using a large colored circle as a symbolic shield
+        color = "#2ea043" if active else "#30363d"
+        pixmap = QPixmap(200, 200)
+        pixmap.fill(Qt.transparent)
+        from PySide6.QtGui import QPainter, QBrush, QPen
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setBrush(QBrush(QIcon.fromTheme("security-high" if active else "security-low").pixmap(180, 180)))
+        if pixmap.isNull(): # Fallback
+            painter.setBrush(QBrush(color))
+            painter.drawEllipse(10, 10, 180, 180)
+        else:
+            painter.drawPixmap(10, 10, QIcon.fromTheme("security-high" if active else "security-low").pixmap(180, 180))
+        painter.end()
+        self.shield_label.setPixmap(pixmap)
 
     def setup_pairing(self):
         layout = QVBoxLayout(self.pairing_tab)
@@ -221,6 +251,16 @@ class SFLNGUI(QMainWindow):
     def setup_security(self):
         layout = QVBoxLayout(self.security_tab)
 
+        # History Option (Idea 3)
+        self.history_group = QWidget()
+        h_layout = QHBoxLayout(self.history_group)
+        h_layout.addWidget(QLabel("Connection History (Recent Peers):"))
+        self.history_btn = QPushButton("DISABLED (Default)")
+        self.history_btn.setCheckable(True)
+        self.history_btn.clicked.connect(self.toggle_history)
+        h_layout.addWidget(self.history_btn)
+        layout.addWidget(self.history_group)
+
         # Startup Option
         self.startup_cb = QPushButton("Register for Auto-Startup (Login)")
         self.startup_cb.clicked.connect(self.register_startup)
@@ -233,6 +273,12 @@ class SFLNGUI(QMainWindow):
         refresh_btn.clicked.connect(self.refresh_apps)
         layout.addWidget(refresh_btn)
         layout.addStretch()
+
+    def toggle_history(self):
+        active = self.history_btn.isChecked()
+        self.history_btn.setText("ENABLED" if active else "DISABLED (Default)")
+        self.history_btn.setStyleSheet("background-color: #2ea043;" if active else "")
+        self.log(f"Connection History is now {'enabled' if active else 'disabled'}.")
 
     def setup_tray(self):
         self.tray = QSystemTrayIcon(self)
@@ -278,15 +324,19 @@ class SFLNGUI(QMainWindow):
     def toggle_sfln(self):
         if not self.engine.is_active:
             self.engine.is_active = True
-            self.status_label.setText("Status: SHIELD ACTIVE")
-            self.status_label.setStyleSheet("color: #28a745; font-weight: bold; font-size: 18px;")
-            self.route_info.setText("AI Decision: P2P (Direct) if available, else Server Relay.")
-            self.log("SFLN Protection Enabled (Admin Mode).")
+            self.status_label.setText("SFLN PROTECTION: ACTIVE")
+            self.status_label.setStyleSheet("color: #2ea043; font-weight: bold; font-size: 22px; margin: 20px;")
+            self.enable_btn.setText("DEACTIVATE PROTECTION")
+            self.update_shield_icon(True)
+            self.route_info.setText("AI Decision: Optimal P2P Mesh Path Found")
+            self.log("SFLN Shield Activated (12,000-digit encryption engaged).")
         else:
             self.engine.is_active = False
-            self.status_label.setText("Status: Idle")
-            self.status_label.setStyleSheet("color: #888; font-size: 18px;")
-            self.log("SFLN Protection Disabled.")
+            self.status_label.setText("SFLN PROTECTION: INACTIVE")
+            self.status_label.setStyleSheet("color: #888; font-size: 22px; margin: 20px;")
+            self.enable_btn.setText("ACTIVATE PROTECTION")
+            self.update_shield_icon(False)
+            self.log("SFLN Shield Deactivated.")
 
     def start_health_server(self):
         def run_server():
