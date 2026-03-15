@@ -57,8 +57,8 @@ class SFLNServer:
         except Exception as e:
             self.logger.error(f"WebSocket Server failed: {e}")
 
-    async def process_request(self, path, request_headers):
-        self.logger.debug(f"WS Request: {path} from {request_headers.get('User-Agent')}")
+    async def process_request(self, connection, request):
+        self.logger.debug(f"WS Request from {request.headers.get('User-Agent')}")
         return None
 
     async def ws_handler(self, websocket):

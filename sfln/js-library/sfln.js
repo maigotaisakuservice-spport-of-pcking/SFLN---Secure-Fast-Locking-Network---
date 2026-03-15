@@ -99,8 +99,7 @@ class SFLNClientJS {
     }
 
     async connect(serverUrl) {
-        const appRunning = await this.verifyAppPresence();
-        if (!appRunning) throw new Error("SFLN Client App not running. Communication disabled.");
+        await this.verifyAppPresence();
 
         let wsUrl = serverUrl;
         if (wsUrl.startsWith("https://")) wsUrl = wsUrl.replace("https://", "wss://");
@@ -146,7 +145,9 @@ class SFLNClientJS {
     }
 
     async send(data, targetId) {
-        if (!this.isVerified) throw new Error("SFLN App Required for Sending");
+        if (!this.isVerified) {
+            console.info("[SFLN] Web-Only Mode: Using in-browser encryption.");
+        }
         const encryptedChunks = await this.crypto.encryptData(data);
         const targetUUID = this.uuidToBytes(targetId);
         const total = encryptedChunks.length;
