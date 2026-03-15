@@ -70,6 +70,18 @@ jobs:
         cd sfln/npm-library
         npm install
         npm install ws
+    - name: Set up Python for Relay
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: Start Relay Server for Testing
+      run: |
+        pip install websockets
+        python3 sfln/server/main.py > relay.log 2>&1 &
+        sleep 5
     - name: Run JS Tests
       run: |
         node sfln/tests/js_test.js
+    - name: Check Relay Log
+      if: always()
+      run: cat relay.log

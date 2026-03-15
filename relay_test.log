@@ -1,0 +1,11 @@
+[H[J[3J2026-03-15 04:40:52,878 [INFO] SFLN Professional Server starting...
+2026-03-15 04:40:52,898 [INFO] server listening on 0.0.0.0:9001
+2026-03-15 04:40:52,898 [INFO] WebSocket Server is running.
+2026-03-15 04:40:58,432 [INFO] connection open
+2026-03-15 04:40:58,432 [INFO] New WS connection from ('127.0.0.1', 54120)
+2026-03-15 04:40:58,440 [INFO] Registered WS node 34cb4d59-faeb-40c7-82da-214b61d21da1 (('127.0.0.1', 54120))
+2026-03-15 04:40:58,447 [INFO] connection open
+2026-03-15 04:40:58,447 [INFO] New WS connection from ('127.0.0.1', 54128)
+2026-03-15 04:40:58,449 [INFO] Registered WS node c0fc7f77-d485-40d7-bf64-fab40eb59626 (('127.0.0.1', 54128))
+2026-03-15 04:40:58,558 [INFO] Unregistered WS node 34cb4d59faeb40c782da214b61d21da1
+2026-03-15 04:40:58,559 [INFO] Unregistered WS node c0fc7f77d48540d7bf64fab40eb59626
