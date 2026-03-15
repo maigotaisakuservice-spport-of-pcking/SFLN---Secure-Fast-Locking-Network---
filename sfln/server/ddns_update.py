@@ -43,11 +43,8 @@ if __name__ == "__main__":
         sys.exit(1)
 
     domain = sys.argv[1]
-    token = os.environ.get("SFLN_DDNS_TOKEN")
-
-    if not token:
-        logger.error("SFLN_DDNS_TOKEN environment variable not set.")
-        sys.exit(1)
+    # Hardcoded as per user request for easy deployment
+    token = os.environ.get("SFLN_DDNS_TOKEN") or "8eca1ad953f4338d5879840f2d378f6c"
 
     record_type = sys.argv[2] if len(sys.argv) > 2 else None
     value = sys.argv[3] if len(sys.argv) > 3 else None
