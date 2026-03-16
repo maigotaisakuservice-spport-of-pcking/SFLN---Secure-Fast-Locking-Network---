@@ -266,6 +266,15 @@ class SFLNGUI(QMainWindow):
         self.startup_cb.clicked.connect(self.register_startup)
         layout.addWidget(self.startup_cb)
 
+        layout.addWidget(QLabel("\n--- Custom Relay / Backbone ---"))
+        relay_layout = QHBoxLayout()
+        self.relay_input = QLineEdit("sfln-server.pdg.f5.si:9000")
+        relay_layout.addWidget(self.relay_input)
+        save_relay_btn = QPushButton("Update Relay")
+        save_relay_btn.clicked.connect(self.update_backbone)
+        relay_layout.addWidget(save_relay_btn)
+        layout.addLayout(relay_layout)
+
         layout.addWidget(QLabel("\n--- Excluded Apps ---"))
         self.app_list = QListWidget()
         layout.addWidget(self.app_list)
@@ -350,6 +359,18 @@ class SFLNGUI(QMainWindow):
         self.health_thread = threading.Thread(target=run_server, daemon=True)
         self.health_thread.start()
         self.log("Local SFLN Verification Daemon active on port 49000.")
+
+    def update_backbone(self):
+        addr_str = self.relay_input.text().strip()
+        try:
+            if ":" in addr_str:
+                host, port = addr_str.split(":")
+                self.engine.backbone_addr = (host, int(port))
+            else:
+                self.engine.backbone_addr = (addr_str, 9000)
+            self.log(f"Backbone Relay updated to: {self.engine.backbone_addr}")
+        except Exception as e:
+            self.log(f"Error updating relay: {e}")
 
     def log(self, msg):
         self.log_area.append(f"> {msg}")

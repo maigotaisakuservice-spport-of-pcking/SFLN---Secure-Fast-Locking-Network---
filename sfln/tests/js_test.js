@@ -1,4 +1,4 @@
-const { SFLNCryptoJS, SFLNClientJS } = require('../js-library/sfln.js');
+const { SFLNCryptoJS, SFLNClientJS } = require('../npm-library/sfln.js');
 const assert = require('assert');
 const WebSocket = require('ws');
 

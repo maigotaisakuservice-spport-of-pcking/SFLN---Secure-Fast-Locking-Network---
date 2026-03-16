@@ -148,6 +148,13 @@
                             <input type="checkbox" id="notify-check" checked>
                             <label for="notify-check" style="font-size: 0.9rem;">ファイル受信時にデスクトップ通知を表示</label>
                         </div>
+
+                        <h5 style="margin-top: 30px; color: #f0f6fc;">ネットワーク設定 (カスタムリレー)</h5>
+                        <p style="font-size: 0.85rem; color: #8b949e;">有志が提供するカスタムリレーサーバーを使用する場合に設定します。</p>
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <input type="text" id="custom-relay-url" placeholder="wss://your-relay-server.com:9001" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #30363d; background: #161b22; color: #f0f6fc; font-family: monospace;">
+                            <button class="cta-button" onclick="saveRelaySettings()">保存して再接続</button>
+                        </div>
                     </div>
                 </section>
             </main>
@@ -165,7 +172,7 @@
         let receivedDataStore = new Map(); // Store blob data temporarily for download
         let pendingMetadata = new Map(); // Map senderId -> metadata
 
-        const RELAY_URL = (location.hostname === 'localhost' || location.hostname === '')
+        const DEFAULT_RELAY = (location.hostname === 'localhost' || location.hostname === '')
             ? "ws://localhost:9001"
             : "wss://sfln-server.pdg.f5.si:9001";
 
@@ -174,6 +181,9 @@
             document.getElementById('user-id').innerText = myId;
             const shareUrl = window.location.origin + window.location.pathname + "#" + myId;
             document.getElementById('share-url').value = shareUrl;
+
+            const savedRelay = localStorage.getItem('sfln_custom_relay') || DEFAULT_RELAY;
+            document.getElementById('custom-relay-url').value = savedRelay;
 
             new QRCode(document.getElementById('qrcode-container'), {
                 text: shareUrl,
@@ -184,14 +194,7 @@
             });
 
             // Initialize Network
-            try {
-                updateConnectionStatus("接続中...", "#f1c40f");
-                await client.connect(RELAY_URL);
-                updateConnectionStatus("セキュアメッシュ接続中", "#3fb950");
-            } catch (e) {
-                console.warn("Relay connection failed, falling back to local mesh only:", e);
-                updateConnectionStatus("ローカルメッシュのみ", "#8b949e");
-            }
+            await initNetwork(savedRelay);
 
             // Check for hash in URL
             if (window.location.hash) {
@@ -247,6 +250,27 @@
         function confirmRegen() {
             if (confirm("マスターキーを再生成しますか？現在の全ての接続と共有リンクが使用できなくなります。")) {
                 location.reload();
+            }
+        }
+
+        async function saveRelaySettings() {
+            const url = document.getElementById('custom-relay-url').value.trim();
+            if (url) {
+                localStorage.setItem('sfln_custom_relay', url);
+                if (client.ws) client.ws.close();
+                await initNetwork(url);
+                alert("リレーサーバー設定を更新しました。");
+            }
+        }
+
+        async function initNetwork(url) {
+            try {
+                updateConnectionStatus("接続中...", "#f1c40f");
+                await client.connect(url);
+                updateConnectionStatus("セキュアメッシュ接続中", "#3fb950");
+            } catch (e) {
+                console.warn("Relay connection failed, falling back to local mesh only:", e);
+                updateConnectionStatus("ローカルメッシュのみ", "#8b949e");
             }
         }
 
