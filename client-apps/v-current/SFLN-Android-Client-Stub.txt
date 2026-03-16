@@ -1,1 +1,0 @@
-SFLN Android Client - Release v0.1.0-beta. The full APK requires an Android SDK environment. Please build locally using 'briefcase package android'.

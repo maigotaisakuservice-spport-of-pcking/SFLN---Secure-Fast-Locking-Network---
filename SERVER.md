@@ -35,15 +35,20 @@ SFLN サーバーを運用する場合、**VPS (Virtual Private Server)** の利
 | 設定難易度 | 中程度 | 低い |
 | 主な用途 | SFLN リレー/アプリサーバー | Webサイト/ブログ |
 
-## 3. VPS が契約できない場合の代替案 (自宅 PC 運用)
+## 3. VPS が契約できない場合の代替案 (自宅 Linux 運用 - 推奨)
 
-VPS の契約が難しい場合、**自宅の PC をサーバー化して Cloudflare Tunnel で公開する** 方法がもっとも簡単で強力です。
+VPS の契約が難しい場合、**自宅の Linux PC (Ubuntu, Debian, Raspberry Pi等) をサーバー化して Cloudflare Tunnel で公開する** 方法がもっとも簡単で強力です。
 
-### 3.1. 自宅 PC + Cloudflare Tunnel (無料)
+### 3.1. 自宅 Linux + Cloudflare Tunnel (無料・ポート開放不要)
 GitHub Actions で使用している技術を自宅でも活用できます。
-1. **サーバー起動**: 自分の PC で `python sfln/server/main.py` を実行。
-2. **Cloudflared インストール**: [Cloudflare 公式](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/install-run/)からバイナリをダウンロード。
-3. **トンネルの作成**: `cloudflared tunnel --url http://localhost:9001` を実行。
+1. **サーバー準備**: 古い PC や Raspberry Pi に Linux (Ubuntu 推奨) をインストールします。
+2. **Cloudflared インストール**:
+   ```bash
+   curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+   sudo dpkg -i cloudflared.deb
+   ```
+3. **SFLN サーバー起動**: `python3 sfln/server/main.py` を実行。
+4. **トンネルの作成**: `cloudflared tunnel --url http://localhost:9001` を実行。
 4. **ドメイン連携**: 発行された `trycloudflare.com` の URL を `f5.si` の CNAME に登録すれば完了です。
    - ※ ルーターのポート開放や固定 IP は一切不要です。
    - **一括起動スクリプト**: `python sfln/server/home_host.py` を実行すると、サーバーの起動とトンネルの確立を一度に行い、公開URLを表示します。
