@@ -2,6 +2,7 @@ import asyncio
 import time
 import sys
 import os
+import uuid
 
 # Add parent directory
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
@@ -14,6 +15,7 @@ async def test_encryption_performance():
     data = os.urandom(1024 * 1024 * 10) # 10MB test data
 
     start = time.time()
+    # Encryption is parallelized in SFLNCrypto now
     chunks = engine.crypto.encrypt_data(data)
     encrypt_time = time.time() - start
     print(f"Encrypted 10MB in {encrypt_time:.4f}s")
@@ -28,10 +30,15 @@ async def test_encryption_performance():
 
 async def test_mesh_and_auth():
     print("\n--- Testing Mesh Discovery and Context Auth ---")
-    engine_a = SFLNEngine(node_id="Node-A")
-    engine_b = SFLNEngine(node_id="Node-B")
+    node_a_id = str(uuid.uuid4())
+    node_b_id = str(uuid.uuid4())
+
+    engine_a = SFLNEngine(node_id=node_a_id)
+    engine_b = SFLNEngine(node_id=node_b_id)
 
     context_a = engine_a.auth.get_current_context()
+    context_a["node_id"] = node_a_id
+
     valid, reason = engine_b.mesh.auth.verify_context(context_a)
     print(f"Context Auth verification result: {valid} ({reason})")
     assert valid
