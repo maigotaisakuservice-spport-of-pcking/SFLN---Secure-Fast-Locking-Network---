@@ -1,54 +1,59 @@
-# SFLN (Secure-Fast-Locking-Network) 開発・利用ガイド
+# SFLN (Secure-Fast-Locking-Network) Project
 
-SFLN は、12,000桁暗号と 1GB/s ターゲットを両立させた次世代 P2P メッシュネットワークです。
+[日本語](#japanese) | [English](#english)
 
 ---
 
+<a name="japanese"></a>
+# 日本語ガイド
+
+SFLN は、12,000桁暗号と 1GB/s ターゲットを両立させた次世代 P2P メッシュネットワークです。独自規格 **SFLN-P v2** を採用し、企業向けの高度なセキュリティと圧倒的な転送速度を提供します。
+
 ## 📱 クライアント・アプリケーション
 
-一般利用者向けの常駐型多機能クライアントです。
+一般利用者およびシステム管理者向けの多機能クライアントです。
 
 ### 🛡️ 特徴とインストール
 - **常駐機能**: 起動後はシステムトレイに格納され、24時間バックグラウンドでネットワークを保護します。
 - **管理者権限 (Admin)**: ネットワークスタックの最適化とパケット制御のため、必ず管理者権限（Windows: 管理者として実行, Linux: sudo）で実行してください。
 - **自動起動**: 設定画面から OS 起動時の自動実行を登録可能です。
-- **QRコード連携**: 「Pairing」タブから自分の Node ID を QR コードで表示。相手とペアリングすることで、エッジAIが最適な経路（直接 P2P またはサーバーリレー）を自動判別し、セキュアな通信を確立します。
+- **ペアリング**: Node ID または QR コードで相手とペアリング。エッジAIが最適な経路（直接 P2P またはサーバーリレー）を自動判別します。
+
+## ⚙️ SFLN-P v2 (独自プロトコル規格)
+SFLN-P v2 は、RFC 準拠を目指すオープンな通信プロトコルです。
+- **42バイト・バイナリヘッダー**: 高効率なパケット構造。
+- **B+C 最適化**: ゼロコピー（B）とマルチプロセス並列処理（C）により 1GB/s を実現。
+- **エンタープライズ対応**: ホワイトリスト制、ハードウェア指紋認証、監査ログ機能を標準装備。
+
+## 🚀 開発者向け SDK
+JavaScript/Node.js および Python に対応。`localhost:49000` のヘルスチェックにより、アプリの稼働状況を自動検証します。
 
 ---
 
-## 🛠️ SDK (ライブラリ) の役割と検証ロジック
+<a name="english"></a>
+# English Guide
 
-### 💡 なにに使えるの？
-- **機密情報の超高速共有**: GB級のデータを既存インフラを通さず安全に転送。
-- **サーバーレス P2P チャット**: サーバーに一切のログを残さない完全秘匿通信。
-- **VPN 不要の IoT 制御**: 外部から自宅や工場の機器をセキュアに操作。
+SFLN is a next-generation P2P mesh network that balances 12,000-digit encryption with a 1GB/s throughput target. Utilizing the **SFLN-P v2** open standard, it provides enterprise-grade security and overwhelming transfer speeds.
 
-### 🔍 クライアントアプリ存在確認 (Verification Logic)
-各 SDK には、ローカル環境に SFLN クライアントアプリがインストール・実行されているかを検証する機能が含まれています。
+## 📱 Client Application
 
-- **ロジック**: SDK 起動時にローカルのポート `49000` へヘルスチェックを行い、アプリが不在の場合は SFLN 通信をバイパス（または無効化）します。これにより、環境が整っていないユーザーに対しても適切なフォールバックを提供できます。
+A multi-functional client designed for both end-users and system administrators.
 
----
+### 🛡️ Features & Installation
+- **Resident Mode**: Minimized to the system tray, protecting your network 24/7 in the background.
+- **Admin Privileges**: MUST be run as Administrator (Windows) or via `sudo` (Linux) for network stack optimization and packet control.
+- **Auto-Startup**: Can be registered to run automatically on OS boot via settings.
+- **Pairing**: Connect via Node ID or QR code. Edge AI automatically determines the optimal path (Direct P2P or Server Relay).
 
-## 🚀 開発者向けリファレンス
+## ⚙️ SFLN-P v2 (Open Protocol Specification)
+SFLN-P v2 is a decentralized communication protocol aiming for RFC compliance.
+- **42-Byte Binary Header**: High-efficiency packet structure.
+- **B+C Optimization**: Zero-copy (Principle B) and Multi-process parallelism (Principle C) to reach 1GB/s.
+- **Enterprise Ready**: Includes Whitelisting, Hardware Fingerprinting, and Audit Logging by default.
 
-### JavaScript SDK
-```javascript
-const client = new SFLNClientJS();
-// アプリの存在を確認
-const isAppRunning = await client.verifyAppPresence();
-if (!isAppRunning) {
-    alert("SFLN アプリをインストールしてください");
-} else {
-    await client.connect('wss://sfln-server.pdg.f5.si');
-    await client.send(data, "TARGET_ID");
-}
-```
+## 🚀 Developer SDK
+Supports JavaScript/Node.js and Python. Automatically verifies the local app status via a health check on `localhost:49000`.
 
 ---
-
-## 🚀 システム自動化 (GitHub Actions)
-
-### 自動ビルド & 公開 (`sfln-build.yml`)
-コード更新時に全 6 種のバイナリを自動ビルドし、Windows 版には UAC 昇格要求（管理者権限）を付与してパッケージ化します。
-成果物は `client-apps/` への公開と `index.html` のリンク更新を完結させます。
+**Author:** TekipakiPC
+**Copyright:** © 2025 SFLN Project. All Rights Reserved.
