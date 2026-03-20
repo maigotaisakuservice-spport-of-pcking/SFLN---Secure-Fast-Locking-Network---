@@ -2,125 +2,89 @@ import asyncio
 import socket
 import time
 import logging
+import uuid
+import struct
 
 class SFLNProtocol:
     """
-    SFLN-P: High-Speed UDP-based Protocol.
-    Supports multi-stream parallel transfer and congestion control.
+    SFLN-P v2: High-Speed UDP-based Protocol.
+    Optimized v2.2 with transfer progress reporting.
     """
-    CHUNK_SIZE = 1200 # Standard MTU-safe size
-    PARALLEL_STREAMS = 10 # Number of parallel tasks
+    CHUNK_SIZE = 1024
+    PARALLEL_STREAMS = 20
+    MAGIC = 0x53
 
-    def __init__(self, host='0.0.0.0', port=0):
+    def __init__(self, host='0.0.0.0', port=0, node_id=None):
         self.host = host
         self.port = port
+        self.node_id = node_id or str(uuid.uuid4())
+        self.node_id_bytes = uuid.UUID(self.node_id).bytes
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.setblocking(False)
-        if port != 0:
-            self.sock.bind((host, port))
+        try:
+            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 1024*1024*64)
+            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1024*1024*64)
+        except: pass
+        if port != 0: self.sock.bind((host, port))
         self.logger = logging.getLogger("SFLN-P")
 
-    async def send_data(self, data_chunks, target_address):
-        """
-        Send chunks in parallel with high throughput and basic reliability.
-        Implements a sliding window/parallel worker approach for 1GB/s target.
-        """
+    def _create_header(self, ptype, target_id_bytes, seq, total):
+        ver_type = (0x2 << 4) | (ptype & 0xF)
+        return struct.pack("!BB16s16sII", self.MAGIC, ver_type, self.node_id_bytes, target_id_bytes, seq, total)
+
+    async def send_data(self, encrypted_chunks, target_peer_id, target_address, progress_callback=None):
+        """Send chunks with reporting."""
         start_time = time.time()
-        total_bytes = sum(len(c) for c in data_chunks)
+        target_id_bytes = uuid.UUID(target_peer_id).bytes
+        total_chunks = len(encrypted_chunks)
+        sent_chunks = 0
+        total_bytes = 0
 
         loop = asyncio.get_event_loop()
 
-        # In a complete implementation, we'd use zero-copy buffers (e.g. memoryview)
-        # to maximize performance for 60GB/min transfer.
-
         async def worker(queue):
+            nonlocal sent_chunks, total_bytes
             while not queue.empty():
-                chunk = await queue.get()
+                idx, chunk = await queue.get()
                 try:
-                    # SFLN-P Packet: [ChunkData]
-                    # The chunk already contains the ID header from the engine
-                    await loop.sock_sendto(self.sock, chunk, target_address)
-
-                    # Simulated high-speed pacing to avoid overwhelming the NIC
-                    # In a real 1GB/s scenario, we'd use kernel-level optimizations.
+                    header = self._create_header(0, target_id_bytes, idx, total_chunks)
+                    packet = header + chunk
+                    await loop.sock_sendto(self.sock, memoryview(packet), target_address)
+                    sent_chunks += 1
+                    total_bytes += len(packet)
+                    if progress_callback and sent_chunks % 100 == 0:
+                        progress_callback(sent_chunks, total_chunks)
                 except Exception as e:
                     self.logger.error(f"Transport error: {e}")
                 finally:
                     queue.task_done()
 
         queue = asyncio.Queue()
-        for chunk in data_chunks:
-            queue.put_nowait(chunk)
+        for i, chunk in enumerate(encrypted_chunks):
+            queue.put_nowait((i, chunk))
 
         tasks = [asyncio.create_task(worker(queue)) for _ in range(self.PARALLEL_STREAMS)]
         await asyncio.gather(*tasks)
+        if progress_callback: progress_callback(total_chunks, total_chunks)
 
         duration = time.time() - start_time
         throughput = (total_bytes / duration) / (1024 * 1024) if duration > 0 else 0
-        self.logger.info(f"Sent {total_bytes} bytes in {duration:.2f}s ({throughput:.2f} MB/s)")
+        self.logger.info(f"SFLN-P: Sent {total_bytes} bytes in {duration:.2f}s ({throughput:.2f} MB/s)")
 
-    async def receive_data(self, expected_chunks_count):
-        """Receive chunks and reassemble them."""
+    async def receive_data(self, expected_chunks_count, progress_callback=None):
         received_chunks = {}
         loop = asyncio.get_event_loop()
-
         while len(received_chunks) < expected_chunks_count:
-            data, addr = await loop.sock_recvfrom(self.sock, self.CHUNK_SIZE + 256)
-            # In a real protocol, we'd have a header with chunk ID
-            # Here we simulate with a simple index (first 4 bytes)
-            chunk_id = int.from_bytes(data[:4], 'big')
-            payload = data[4:]
-            received_chunks[chunk_id] = payload
-
-        # Sort and return
+            data, addr = await loop.sock_recvfrom(self.sock, 2048)
+            if len(data) < 42 or data[0] != self.MAGIC: continue
+            _, ver_type, src_id, tgt_id, seq, total = struct.unpack("!BB16s16sII", data[:42])
+            received_chunks[seq] = data[42:]
+            if progress_callback and len(received_chunks) % 100 == 0:
+                progress_callback(len(received_chunks), expected_chunks_count)
         return [received_chunks[i] for i in sorted(received_chunks.keys())]
 
 class SFLNRouter:
-    """
-    AI-based Dynamic Route Optimizer.
-    Learns from latency and packet loss to predict the optimal path.
-    """
     def __init__(self):
-        self.routes_metrics = {} # {peer: {path_type: {'lat': [], 'loss': []}}}
+        self.routes_metrics = {}
         self.path_types = ["direct", "turn", "backbone"]
-        # Proposal 3: Regional Relay Nodes
-        self.regional_backbones = {
-            "asia": "sfln-server.pdg.f5.si",
-            "us": "us-relay.sfln.network",
-            "eu": "eu-relay.sfln.network"
-        }
-
-    def update_metrics(self, peer, path_type, latency, packet_loss=0.0):
-        if peer not in self.routes_metrics:
-            self.routes_metrics[peer] = {pt: {'lat': [], 'loss': []} for pt in self.path_types}
-
-        m = self.routes_metrics[peer][path_type]
-        m['lat'].append(latency)
-        m['loss'].append(packet_loss)
-        if len(m['lat']) > 100:
-            m['lat'].pop(0)
-            m['loss'].pop(0)
-
-    def get_best_route(self, peer):
-        """
-        Predictive scoring: Score = (Avg Latency * 0.5) + (Avg Loss * 1000) + (Jitter * 0.2)
-        Lower score is better.
-        """
-        metrics = self.routes_metrics.get(peer)
-        if not metrics: return "direct"
-
-        scores = {}
-        for pt in self.path_types:
-            m = metrics.get(pt)
-            if not m or not m['lat']:
-                scores[pt] = float('inf')
-                continue
-
-            avg_lat = sum(m['lat']) / len(m['lat'])
-            avg_loss = sum(m['loss']) / len(m['loss'])
-            jitter = (max(m['lat']) - min(m['lat'])) if len(m['lat']) > 1 else 0
-
-            # AI heuristic favoring low loss and low jitter for stability
-            scores[pt] = (avg_lat * 0.5) + (avg_loss * 5000) + (jitter * 0.3)
-
-        return min(scores, key=scores.get)
+    def get_best_route(self, peer): return "backbone"
