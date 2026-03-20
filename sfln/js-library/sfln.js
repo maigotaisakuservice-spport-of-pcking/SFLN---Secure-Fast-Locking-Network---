@@ -1,5 +1,6 @@
 /**
- * SFLN JavaScript Library
+ * SFLN JavaScript Library v2.2
+ * Supports SFLN-P v2.2 Open Standard
  */
 
 class SFLNCryptoJS {
@@ -22,7 +23,8 @@ class SFLNCryptoJS {
         return await crypto.subtle.importKey('raw', hashBuffer, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
     }
 
-    async encryptData(data) {
+    async encryptData(data, progressCallback = null) {
+        const totalChunks = Math.ceil(data.length / this.CHUNK_SIZE);
         const encryptedChunks = [];
         for (let i = 0; i < data.length; i += this.CHUNK_SIZE) {
             const chunk = data.slice(i, i + this.CHUNK_SIZE);
@@ -31,13 +33,17 @@ class SFLNCryptoJS {
             const key = await this.deriveChunkKey(idx, chunkSeed);
             const nonce = crypto.getRandomValues(new Uint8Array(12));
             const encryptedBuffer = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, key, chunk);
-            const encryptedPayload = new Uint8Array(encryptedBuffer);
-            const finalChunk = new Uint8Array(12 + this.KEY_EMBED_SIZE + encryptedPayload.length);
-            finalChunk.set(nonce);
-            finalChunk.set(chunkSeed, 12);
-            finalChunk.set(encryptedPayload, 12 + this.KEY_EMBED_SIZE);
-            encryptedChunks.push({ index: idx, data: finalChunk });
+            encryptedChunks.push({ index: idx, data: new Uint8Array(12 + this.KEY_EMBED_SIZE + encryptedBuffer.byteLength), nonce, chunkSeed, encryptedBuffer });
+            const p = encryptedChunks[encryptedChunks.length - 1];
+            p.data.set(nonce);
+            p.data.set(chunkSeed, 12);
+            p.data.set(new Uint8Array(encryptedBuffer), 12 + this.KEY_EMBED_SIZE);
+
+            if (progressCallback && idx % 100 === 0) {
+                progressCallback(idx, totalChunks);
+            }
         }
+        if (progressCallback) progressCallback(totalChunks, totalChunks);
         return encryptedChunks;
     }
 
@@ -49,82 +55,50 @@ class SFLNCryptoJS {
         const decryptedBuffer = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: nonce }, key, encryptedPayload);
         return new Uint8Array(decryptedBuffer);
     }
-
-    async decryptChunks(chunks) {
-        let decryptedParts = [];
-        for (let i = 0; i < chunks.length; i++) {
-            const chunkObj = chunks[i];
-            const data = (chunkObj instanceof Uint8Array) ? chunkObj : chunkObj.data;
-            const idx = (chunkObj instanceof Uint8Array) ? i : chunkObj.index;
-            const decrypted = await this.decryptChunk(data, idx);
-            decryptedParts.push(decrypted);
-        }
-        const totalLength = decryptedParts.reduce((acc, p) => acc + p.length, 0);
-        const result = new Uint8Array(totalLength);
-        let offset = 0;
-        for (const part of decryptedParts) { result.set(part, offset); offset += part.length; }
-        return result;
-    }
 }
 
 class SFLNClientJS {
     constructor(masterKey = null, nodeId = null) {
         this.crypto = new SFLNCryptoJS(masterKey);
-        this.nodeId = nodeId || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : this.generateUUID());
+        this.nodeId = nodeId || this.generateUUID();
         this.ws = null;
         this.onMessage = null;
         this.onProgress = null;
         this.activeTransfers = new Map();
-        this.isVerified = false; // Whether local SFLN client app is running
+        this.isVerified = false;
+        this.pendingMetadata = new Map();
     }
 
-    /**
-     * Verification Logic: Check if SFLN Client App is installed and running
-     */
     async verifyAppPresence() {
         try {
-            // Attempt to hit the local health server on port 49000
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 1000);
-            const response = await fetch('http://localhost:49000/status', { signal: controller.signal });
-            clearTimeout(timeoutId);
-            this.isVerified = response.ok;
-        } catch (e) {
-            this.isVerified = false;
-        }
-        if (!this.isVerified) {
-            console.warn("[SFLN] Local Client App NOT detected. SFLN encryption will be bypassed.");
-        }
+            const res = await fetch('http://localhost:49000/status');
+            this.isVerified = res.ok;
+        } catch (e) { this.isVerified = false; }
         return this.isVerified;
     }
 
     async connect(serverUrl) {
-        await this.verifyAppPresence();
-
         let wsUrl = serverUrl;
         if (wsUrl.startsWith("https://")) wsUrl = wsUrl.replace("https://", "wss://");
         return new Promise((resolve, reject) => {
-            try {
-                this.ws = new WebSocket(wsUrl);
-                this.ws.binaryType = 'arraybuffer';
-                this.ws.onopen = () => this.ws.send(JSON.stringify({ type: "register", node_id: this.nodeId }));
-                this.ws.onmessage = async (event) => {
-                    if (typeof event.data === 'string') {
-                        const msg = JSON.parse(event.data);
-                        if (msg.type === 'reg_ack') resolve();
-                    } else {
-                        const data = new Uint8Array(event.data);
-                        if (data[0] === 0x53 && data[1] === 0x02) {
-                            const sourceId = this.bytesToUuid(data.slice(2, 18));
-                            const total = new DataView(data.buffer, 18, 4).getUint32(0);
-                            const idx = new DataView(data.buffer, 22, 4).getUint32(0);
-                            this.handleReceivedChunk(sourceId, idx, total, data.slice(26));
-                        }
+            this.ws = new WebSocket(wsUrl);
+            this.ws.binaryType = 'arraybuffer';
+            this.ws.onopen = () => this.ws.send(JSON.stringify({ type: "register", node_id: this.nodeId }));
+            this.ws.onmessage = async (event) => {
+                if (typeof event.data === 'string') {
+                    const msg = JSON.parse(event.data);
+                    if (msg.type === 'reg_ack') resolve();
+                } else {
+                    const data = new Uint8Array(event.data);
+                    // Standard SFLN-P v2 packet (Relayed)
+                    if (data[0] === 0x53 && (data[1] >> 4) === 0x2) {
+                        const sourceId = this.bytesToUuid(data.slice(2, 18));
+                        const seq = new DataView(data.buffer, 34, 4).getUint32(0);
+                        const total = new DataView(data.buffer, 38, 4).getUint32(0);
+                        this.handleReceivedChunk(sourceId, seq, total, data.slice(42));
                     }
-                };
-                this.ws.onerror = () => reject(new Error("WebSocket Failed"));
-                setTimeout(() => { if (this.ws.readyState !== WebSocket.OPEN) reject(new Error("Timeout")); }, 5000);
-            } catch (err) { reject(err); }
+                }
+            };
         });
     }
 
@@ -133,32 +107,56 @@ class SFLNClientJS {
         const transfer = this.activeTransfers.get(senderId);
         const decrypted = await this.crypto.decryptChunk(encryptedData, index);
         transfer.chunks.set(index, decrypted);
-        if (this.onProgress) this.onProgress(transfer.chunks.size, total);
+
+        if (this.onProgress) this.onProgress("RECEIVING", transfer.chunks.size, total);
+
         if (transfer.chunks.size === total) {
             const sorted = Array.from(transfer.chunks.entries()).sort((a,b) => a[0]-b[0]).map(x => x[1]);
             const fullData = new Uint8Array(sorted.reduce((a,b) => a + b.length, 0));
             let offset = 0;
             for (const p of sorted) { fullData.set(p, offset); offset += p.length; }
-            if (this.onMessage) this.onMessage(fullData, senderId);
+
+            // Check for metadata
+            try {
+                const text = new TextDecoder().decode(fullData);
+                const msg = JSON.parse(text);
+                if (msg.type === 'file_meta') {
+                    this.pendingMetadata.set(senderId, msg);
+                    this.activeTransfers.delete(senderId);
+                    return;
+                }
+            } catch (e) {}
+
+            const meta = this.pendingMetadata.get(senderId);
+            if (this.onMessage) this.onMessage(fullData, senderId, meta ? meta.name : "received_file");
             this.activeTransfers.delete(senderId);
+            this.pendingMetadata.delete(senderId);
         }
     }
 
-    async send(data, targetId) {
-        if (!this.isVerified) {
-            console.info("[SFLN] Web-Only Mode: Using in-browser encryption.");
-        }
-        const encryptedChunks = await this.crypto.encryptData(data);
+    async send(data, targetId, progressCallback = null) {
+        const encryptedChunks = await this.crypto.encryptData(data, (cur, tot) => {
+            if (progressCallback) progressCallback("ENCRYPTING", cur, tot);
+        });
+
         const targetUUID = this.uuidToBytes(targetId);
+        const myUUID = this.uuidToBytes(this.nodeId);
         const total = encryptedChunks.length;
-        for (const chunk of encryptedChunks) {
-            const packet = new Uint8Array(2 + 16 + 4 + 4 + chunk.data.length);
-            packet[0] = 0x53; packet[1] = 0x01;
-            packet.set(targetUUID, 2);
-            new DataView(packet.buffer).setUint32(18, total);
-            new DataView(packet.buffer).setUint32(22, chunk.index);
-            packet.set(chunk.data, 26);
+
+        for (let i = 0; i < encryptedChunks.length; i++) {
+            const chunk = encryptedChunks[i];
+            const packet = new Uint8Array(42 + chunk.data.length);
+            packet[0] = 0x53; packet[1] = (0x2 << 4) | 0x0; // SFLN-P v2 Data
+            packet.set(myUUID, 2);
+            packet.set(targetUUID, 18);
+            new DataView(packet.buffer).setUint32(34, i);
+            new DataView(packet.buffer).setUint32(38, total);
+            packet.set(chunk.data, 42);
             this.ws.send(packet);
+
+            if (progressCallback && i % 100 === 0) {
+                progressCallback("TRANSFERRING", i, total);
+            }
         }
     }
 
@@ -173,21 +171,8 @@ class SFLNClientJS {
         const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
         return `${hex.substr(0,8)}-${hex.substr(8,4)}-${hex.substr(12,4)}-${hex.substr(16,4)}-${hex.substr(20)}`;
     }
-
-    /**
-     * SFLN Link / Deep Link Parser (Idea 1 & 9)
-     */
-    parseSflnLink(url) {
-        try {
-            const hash = url.split('#')[1] || url.split('?id=')[1];
-            if (!hash) return null;
-            // Simplified: Expect Base64 or just Node ID
-            const data = atob(hash);
-            return JSON.parse(data); // Returns {node_id, pubkey, etc}
-        } catch (e) {
-            return { node_id: url.split('#')[1] };
-        }
-    }
 }
 
-if (typeof module !== 'undefined') module.exports = { SFLNCryptoJS, SFLNClientJS };
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { SFLNCryptoJS, SFLNClientJS };
+}

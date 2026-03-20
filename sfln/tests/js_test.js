@@ -16,7 +16,16 @@ async function test_js_crypto() {
     const chunks = await cryptoInstance.encryptData(testData);
     console.log(`Encrypted into ${chunks.length} chunks.`);
 
-    const decrypted = await cryptoInstance.decryptChunks(chunks);
+    // Manually reconstruct chunks for testing since it's v2 logic
+    const decryptedChunks = [];
+    for (let i = 0; i < chunks.length; i++) {
+        decryptedChunks.push(await cryptoInstance.decryptChunk(chunks[i].data, i));
+    }
+    const decryptedLen = decryptedChunks.reduce((a,b) => a + b.length, 0);
+    const decrypted = new Uint8Array(decryptedLen);
+    let off = 0;
+    for (const d of decryptedChunks) { decrypted.set(d, off); off += d.length; }
+
     const decryptedText = new TextDecoder().decode(decrypted);
 
     assert.strictEqual(decryptedText, "Hello SFLN from JavaScript!");
@@ -27,7 +36,13 @@ async function test_js_crypto() {
     for (let i = 0; i < largeData.length; i++) largeData[i] = i % 256;
     console.log(`Testing 1MB data...`);
     const largeChunks = await cryptoInstance.encryptData(largeData);
-    const largeDecrypted = await cryptoInstance.decryptChunks(largeChunks);
+    const largeDecryptedChunks = [];
+    for (let i = 0; i < largeChunks.length; i++) {
+        largeDecryptedChunks.push(await cryptoInstance.decryptChunk(largeChunks[i].data, i));
+    }
+    const largeDecrypted = new Uint8Array(largeData.length);
+    let loff = 0;
+    for (const d of largeDecryptedChunks) { largeDecrypted.set(d, loff); loff += d.length; }
 
     assert.deepStrictEqual(largeDecrypted, largeData);
     console.log("✅ 1MB data integrity check passed.");
