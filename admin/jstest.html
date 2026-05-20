@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>SFLN JS SDK Admin Test Suite</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        .test-container { padding: 40px; }
+        .test-section { background: #161b22; border: 1px solid #30363d; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+        .log-box { background: #000; color: #3fb950; padding: 15px; font-family: monospace; height: 200px; overflow-y: auto; border-radius: 6px; }
+    </style>
+</head>
+<body style="background: var(--bg-color); color: var(--primary-text-color);">
+    <div class="container test-container">
+        <h1>SFLN JS SDK テストスイート (Admin)</h1>
+
+        <div class="test-section">
+            <h3>0. サーバー設定</h3>
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="relay-url" placeholder="wss://sfln-server.pdg.f5.si:9001" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #30363d; background: #0d1117; color: #f0f6fc; font-family: monospace;">
+                <button class="cta-button" onclick="saveSettings()">設定保存</button>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>1. SDK 接続テスト</h3>
+            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
+                <button class="cta-button" onclick="testConnection()">Relay サーバーに接続</button>
+                <div id="node-id-display" style="display: none; align-items: center; gap: 10px; background: #0d1117; padding: 8px 12px; border-radius: 6px; border: 1px solid #30363d; cursor: pointer;" onclick="copyNodeId()">
+                    <span style="font-size: 0.8rem; color: #8b949e;">Your Node ID:</span>
+                    <code id="node-id-val" style="color: #58a6ff; font-family: monospace;"></code>
+                </div>
+            </div>
+            <p id="conn-status" style="margin-top: 10px; color: #8b949e;">ステータス: 未接続</p>
+        </div>
+
+        <div class="test-section">
+            <h3>2. ウィジェット埋め込みテスト</h3>
+            <div id="widget-container"></div>
+            <button class="cta-button" onclick="injectWidget()" style="margin-top: 10px; background: #1f6feb;">ウィジェットを再注入</button>
+        </div>
+
+        <div class="test-section">
+            <h3>3. デバッグログ</h3>
+            <div id="debug-log" class="log-box"></div>
+        </div>
+    </div>
+
+    <script src="../sfln/js-library/sfln.js"></script>
+    <script src="../sfln/js-library/sfln-easy.js"></script>
+    <script>
+        const logEl = document.getElementById('debug-log');
+        const DEFAULT_RELAY = "wss://sfln-server.pdg.f5.si:9001";
+
+        function saveSettings() {
+            const url = document.getElementById('relay-url').value.trim();
+            localStorage.setItem('sfln_admin_relay', url);
+            log("設定を保存しました: " + url);
+            location.reload();
+        }
+        function log(msg) {
+            const entry = document.createElement('div');
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            logEl.appendChild(entry);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        let adminClient = null;
+
+        async function testConnection() {
+            log("接続テスト開始...");
+            const url = localStorage.getItem('sfln_admin_relay') || DEFAULT_RELAY;
+            adminClient = new SFLNClientJS();
+            document.getElementById('node-id-val').innerText = adminClient.nodeId;
+            document.getElementById('node-id-display').style.display = 'flex';
+
+            try {
+                await adminClient.connect(url);
+                document.getElementById('conn-status').innerText = "ステータス: 接続完了";
+                log("Relay サーバーへの登録が完了しました。 Node ID: " + adminClient.nodeId);
+            } catch (e) {
+                log("エラー: " + e.message);
+                document.getElementById('conn-status').innerText = "ステータス: 接続失敗";
+            }
+        }
+
+        async function copyNodeId() {
+            const id = document.getElementById('node-id-val').innerText;
+            try {
+                await navigator.clipboard.writeText(id);
+                const valEl = document.getElementById('node-id-val');
+                const oldColor = valEl.style.color;
+                valEl.innerText = "COPIED!";
+                valEl.style.color = "#3fb950";
+                setTimeout(() => {
+                    valEl.innerText = adminClient.nodeId;
+                    valEl.style.color = oldColor;
+                }, 1500);
+            } catch (err) { log("Copy failed: " + err); }
+        }
+
+        function injectWidget() {
+            log("EasyWidget を注入します...");
+            const url = localStorage.getItem('sfln_admin_relay') || DEFAULT_RELAY;
+            document.getElementById('widget-container').innerHTML = '<div id="test-widget"></div>';
+            new SFLNEasyWidget('test-widget', {
+                buttonText: '管理用セキュア送信',
+                primaryColor: '#d2a8ff',
+                relayServer: url
+            });
+            log("注入完了。 Relay: " + url);
+        }
+
+        window.onload = () => {
+            document.getElementById('relay-url').value = localStorage.getItem('sfln_admin_relay') || DEFAULT_RELAY;
+            injectWidget();
+        };
+    </script>
+</body>
+</html>

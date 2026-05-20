@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>SFLN Transfer - 究極のセキュア P2P ファイル共有</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        .service-ui { background: #161b22; color: #c9d1d9; border: 1px solid #30363d; min-height: 85vh; border-radius: 12px; display: flex; overflow: hidden; margin-top: 20px;}
+        .sidebar-ui { width: 260px; background: #0d1117; border-right: 1px solid #30363d; padding: 25px; display: flex; flex-direction: column; }
+        .main-ui { flex: 1; padding: 40px; overflow-y: auto; }
+        .nav-item { padding: 12px 15px; border-radius: 8px; cursor: pointer; margin-bottom: 8px; color: #8b949e; transition: all 0.2s; display: flex; align-items: center; gap: 10px; }
+        .nav-item:hover { background: rgba(255,255,255,0.05); color: #f0f6fc; }
+        .nav-item.active { background: rgba(88, 166, 255, 0.1); color: #58a6ff; font-weight: bold; }
+        .drop-zone { border: 2px dashed #30363d; background: #0d1117; padding: 60px 40px; text-align: center; border-radius: 16px; margin-top: 20px; transition: all 0.3s; cursor: pointer; }
+        .drop-zone:hover { border-color: #58a6ff; background: rgba(88, 166, 255, 0.05); }
+        .file-item { display: flex; justify-content: space-between; padding: 18px; border-bottom: 1px solid #30363d; align-items: center; animation: fadeIn 0.4s ease-out; }
+        .badge-sfln { background: #238636; color: #fff; padding: 3px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; }
+        .view-section { display: none; }
+        .view-section.active { display: block; }
+        .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body style="background: var(--bg-color); font-family: 'Noto Sans JP', sans-serif;">
+    <div class="container" style="max-width: 1100px;">
+        <div class="service-ui">
+            <aside class="sidebar-ui">
+                <div style="margin-bottom: 40px;">
+                    <h2 style="color: #58a6ff; border: none; font-size: 1.6rem; margin: 0;">SFLN Transfer</h2>
+                    <p style="font-size: 0.7rem; color: #8b949e; margin: 5px 0 0 0;">Secure Mesh P2P v2.2 (SFLN-P)</p>
+                </div>
+                <nav style="flex: 1;">
+                    <div class="nav-item active" onclick="showView('transfer')"><span>📤</span> ファイル転送</div>
+                    <div class="nav-item" onclick="showView('links')"><span>🔗</span> 共有リンク (QR)</div>
+                    <div class="nav-item" onclick="showView('settings')"><span>⚙️</span> 設定</div>
+                </nav>
+                <div style="padding: 15px; background: rgba(56, 139, 253, 0.1); border: 1px solid rgba(56, 139, 253, 0.2); border-radius: 12px; font-size: 0.8rem;">
+                    <p style="color: #8b949e; margin-bottom: 8px;">状態:</p>
+                    <p id="app-status" style="color: #8b949e; font-weight: bold; margin-bottom: 5px;">Desktop App: 未検出</p>
+                    <p id="relay-status" style="color: #f1c40f; font-weight: bold;">Relay: 接続中...</p>
+                </div>
+            </aside>
+
+            <main class="main-ui">
+                <!-- Transfer View -->
+                <section id="transfer-view" class="view-section active">
+                    <header style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 30px;">
+                        <div>
+                            <h3 style="margin: 0; font-size: 1.5rem;">ファイルを送る</h3>
+                            <p style="color: #8b949e; font-size: 0.9rem;">12,000桁暗号。クライアントアプリとも相互転送可能です。</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 0.75rem; color: #8b949e; margin-bottom: 4px;">マイノード ID</div>
+                            <code id="user-id" style="color: #58a6ff; background: #0d1117; padding: 4px 8px; border-radius: 4px; border: 1px solid #30363d; cursor: pointer;" onclick="copyMyId()">Initializing...</code>
+                        </div>
+                    </header>
+
+                    <div id="setup-node" style="background: #0d1117; padding: 30px; border-radius: 16px; border: 1px solid #30363d; margin-bottom: 30px;">
+                        <h4 style="margin-top: 0;">1. 送信先を指定</h4>
+                        <div style="display: flex; gap: 12px;">
+                            <input type="text" id="target-id" placeholder="相手のノード ID (App/Web共通) を入力" style="flex: 1; padding: 14px; border-radius: 8px; border: 1px solid #30363d; background: #161b22; color: #f0f6fc; font-family: monospace;">
+                            <button class="cta-button" onclick="pairNode()" style="padding: 0 30px;">接続を確立</button>
+                        </div>
+                    </div>
+
+                    <div id="drop-area" style="display: none;">
+                        <h4 style="margin-top: 0;">2. ファイルを選択</h4>
+                        <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+                            <svg style="width: 48px; height: 48px; fill: #58a6ff; margin-bottom: 15px;" viewBox="0 0 24 24"><path d="M11 15h2V9h3l-4-4-4 4h3z"/><path d="M20 18H4v-7H2v7c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-7h-2v7z"/></svg>
+                            <p style="font-size: 1.1rem; font-weight: bold; margin: 0;">ドラッグ＆ドロップ、またはクリックで選択</p>
+                            <input type="file" id="file-input" style="display: none;" onchange="handleFileSelect(event)">
+                        </div>
+                    </div>
+
+                    <div id="progress-container" style="display: none; margin-top: 30px; background: #30363d; height: 12px; border-radius: 6px; overflow: hidden; position: relative;">
+                        <div id="progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #58a6ff, #1f6feb); transition: width 0.3s;"></div>
+                    </div>
+                    <p id="transfer-status" style="font-size: 0.9rem; text-align: center; margin-top: 10px; color: #f0f6fc;"></p>
+
+                    <div class="file-list">
+                        <h4 style="border-bottom: 1px solid #30363d; padding-bottom: 10px;">転送履歴</h4>
+                        <div id="received-files"></div>
+                    </div>
+                </section>
+
+                <section id="links-view" class="view-section">
+                    <h3>共有リンク</h3>
+                    <div style="background: #0d1117; padding: 25px; border-radius: 12px; border: 1px solid #30363d; margin-top: 20px; text-align: center;">
+                        <div id="qrcode-container" style="background: #fff; padding: 15px; border-radius: 10px; display: inline-block;"></div>
+                        <div style="margin-top: 20px; text-align: left;">
+                            <label style="font-size: 0.8rem; color: #8b949e; display: block; margin-bottom: 8px;">共有用 URL</label>
+                            <input type="text" id="share-url" readonly style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #30363d; background: #161b22; color: #58a6ff; font-family: monospace;">
+                        </div>
+                    </div>
+                </section>
+
+                <section id="settings-view" class="view-section">
+                    <h3>設定</h3>
+                    <div style="background: #0d1117; padding: 25px; border-radius: 12px; border: 1px solid #30363d; margin-top: 20px;">
+                        <h5 style="margin-top: 0; color: #f0f6fc;">カスタムリレーサーバー (Custom Backbone)</h5>
+                        <p style="font-size: 0.85rem; color: #8b949e;">独自のリレーサーバーを使用する場合に指定します。</p>
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <input type="text" id="custom-relay-url" placeholder="wss://your-relay.com:9001" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #30363d; background: #161b22; color: #f0f6fc; font-family: monospace;">
+                            <button class="cta-button" onclick="saveRelay()">保存して再接続</button>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="../sfln/js-library/sfln.js"></script>
+    <script>
+        const client = new SFLNClientJS();
+        let pairedNode = null;
+        const DEFAULT_RELAY = "wss://sfln-server.pdg.f5.si:9001";
+
+        window.onload = async () => {
+            document.getElementById('user-id').innerText = client.nodeId;
+
+            // Check for Auto-Pairing in URL Hash
+            if (window.location.hash) {
+                const targetId = window.location.hash.substring(1);
+                if (targetId.length > 20) {
+                    document.getElementById('target-id').value = targetId;
+                    pairNode();
+                }
+            }
+
+            const url = localStorage.getItem('sfln_custom_relay') || DEFAULT_RELAY;
+            document.getElementById('custom-relay-url').value = url;
+
+            // Check for Desktop App
+            const isApp = await client.verifyAppPresence();
+            document.getElementById('app-status').innerText = `Desktop App: ${isApp ? '検出済' : '未検出'}`;
+            document.getElementById('app-status').style.color = isApp ? '#3fb950' : '#8b949e';
+
+            // Populate share URL before waiting for connection
+            const shareUrl = window.location.origin + window.location.pathname + "#" + client.nodeId;
+            document.getElementById('share-url').value = shareUrl;
+            new QRCode(document.getElementById('qrcode-container'), { text: shareUrl, width: 200, height: 200 });
+
+            await client.connect(url);
+            document.getElementById('relay-status').innerText = "Relay: 接続済み";
+            document.getElementById('relay-status').style.color = "#3fb950";
+        };
+
+        client.onMessage = (data, senderId, filename) => {
+            const blob = new Blob([data]);
+            const url = URL.createObjectURL(blob);
+            addFileItem(filename, data.length, true, url);
+        };
+
+        client.onProgress = (phase, cur, tot) => {
+            updateProgressUI(phase, cur, tot);
+        };
+
+        function showView(name) {
+            document.querySelectorAll('.view-section').forEach(v => v.classList.toggle('active', v.id === name + '-view'));
+            document.querySelectorAll('.nav-item').forEach((n, i) => n.classList.toggle('active', ['transfer', 'links', 'settings'][i] === name));
+        }
+
+        function pairNode() {
+            pairedNode = document.getElementById('target-id').value.trim();
+            if (pairedNode) document.getElementById('drop-area').style.display = 'block';
+        }
+
+        async function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file || !pairedNode) return;
+
+            // Send Meta
+            const meta = JSON.stringify({ type: 'file_meta', name: file.name, size: file.size });
+            await client.send(new TextEncoder().encode(meta), pairedNode);
+
+            // Send Data
+            const data = new Uint8Array(await file.arrayBuffer());
+            await client.send(data, pairedNode, (phase, cur, tot) => updateProgressUI(phase, cur, tot));
+            addFileItem(file.name, file.size, false);
+        }
+
+        function updateProgressUI(phase, cur, tot) {
+            const prog = Math.round((cur/tot)*100);
+            document.getElementById('progress-container').style.display = 'block';
+            document.getElementById('progress-bar').style.width = prog + '%';
+            document.getElementById('transfer-status').innerText = `[${phase}] ${prog}% (${cur}/${tot})`;
+            if (prog >= 100 && phase === "TRANSFERRING") setTimeout(() => document.getElementById('progress-container').style.display='none', 2000);
+        }
+
+        function addFileItem(name, size, isReceived, url=null) {
+            const item = document.createElement('div');
+            item.className = 'file-item';
+            const sizeStr = (size/1024/1024).toFixed(2) + ' MB';
+            item.innerHTML = `<div><h5>${name}</h5><span>${sizeStr} • ${isReceived?'受信':'送信'}</span></div>`;
+            if (isReceived && url) {
+                const btn = document.createElement('button');
+                btn.className = 'cta-button'; btn.innerText = 'ダウンロード';
+                btn.onclick = () => { const a = document.createElement('a'); a.href = url; a.download = name; a.click(); };
+                item.appendChild(btn);
+            }
+            document.getElementById('received-files').prepend(item);
+        }
+
+        async function saveRelay() {
+            const url = document.getElementById('custom-relay-url').value.trim();
+            localStorage.setItem('sfln_custom_relay', url);
+            location.reload();
+        }
+
+        async function copyMyId() {
+            const id = document.getElementById('user-id').innerText;
+            try {
+                await navigator.clipboard.writeText(id);
+                const originalText = document.getElementById('user-id').innerText;
+                document.getElementById('user-id').innerText = "Copied!";
+                setTimeout(() => { document.getElementById('user-id').innerText = originalText; }, 2000);
+            } catch (err) {
+                console.error('Failed to copy: ', err);
+            }
+        }
+    </script>
+</body>
+</html>

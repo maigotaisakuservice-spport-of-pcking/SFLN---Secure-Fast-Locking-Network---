@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SFLN - Secure Fast Locking Network 公式サイト</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <a href="#" class="logo">SFLN</a>
+            <nav>
+                <ul>
+                    <li><a href="#about">SFLNとは</a></li>
+                    <li><a href="demoservice/js-transfer.html">SFLN Transfer</a></li>
+                    <li><a href="docs.html">Docs</a></li>
+                    <li><a href="#features">特徴</a></li>
+                    <li><a href="#download">ダウンロード</a></li>
+                    <li><a href="#news">ニュース</a></li>
+                    <li><a href="dev-news.html">開発ニュース</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+
+    <div class="dev-banner">
+        <div class="container">
+            <p><strong>【お知らせ】</strong>このSFLNプロジェクトは現在活発に開発中です。仕様や機能は予告なく変更される場合があります。</p>
+        </div>
+    </div>
+
+    <main>
+        <section id="hero">
+            <div class="container">
+                <h1>SFLN (Secure Fast Locking Network)</h1>
+                <p class="subtitle">究極のセキュリティ、圧倒的な速度、絶対的な安定性を、すべての人へ。</p>
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
+                    <div style="display: flex; justify-content: center; gap: 20px;">
+                        <a href="demoservice/js-transfer.html" class="cta-button">ワンクリックでセキュア通信を開始</a>
+                        <a href="#download" class="cta-button" style="background: transparent; border: 1px solid var(--accent-color); color: var(--accent-color);">アプリをダウンロード</a>
+                    </div>
+                    <p style="font-size: 0.9rem; color: var(--secondary-text-color);">※ SFLN Transfer はブラウザだけで動作し、アプリなしでも P2P 送信が可能です。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Architecture Diagram -->
+        <section class="container">
+            <div class="architecture-container">
+                <h3 style="text-align: center; margin-bottom: 2rem;">SFLN 通信アーキテクチャ</h3>
+                <svg viewBox="0 0 800 200" class="architecture-svg">
+                    <!-- Client A -->
+                    <rect x="50" y="70" width="120" height="60" rx="8" fill="#161b22" stroke="#58a6ff" stroke-width="2"/>
+                    <text x="110" y="105" fill="#f0f6fc" text-anchor="middle" font-size="14" font-weight="bold">送信端末 A</text>
+
+                    <!-- Arrow 1 -->
+                    <path d="M 170 100 L 240 100" stroke="#30363d" stroke-width="2" marker-end="url(#arrowhead)"/>
+                    <text x="205" y="90" fill="#8b949e" text-anchor="middle" font-size="10">暗号化・断片化</text>
+
+                    <!-- SFLN Cloud (Mesh) -->
+                    <circle cx="400" cy="100" r="60" fill="rgba(88, 166, 255, 0.1)" stroke="#58a6ff" stroke-width="1" stroke-dasharray="4"/>
+                    <text x="400" y="105" fill="#58a6ff" text-anchor="middle" font-size="16" font-weight="bold">SFLN MESH</text>
+                    <text x="400" y="125" fill="#8b949e" text-anchor="middle" font-size="10">分散リレー</text>
+
+                    <!-- Arrow 2 -->
+                    <path d="M 560 100 L 630 100" stroke="#30363d" stroke-width="2" marker-end="url(#arrowhead)"/>
+                    <text x="595" y="90" fill="#8b949e" text-anchor="middle" font-size="10">再構築・復号</text>
+
+                    <!-- Client B -->
+                    <rect x="630" y="70" width="120" height="60" rx="8" fill="#161b22" stroke="#58a6ff" stroke-width="2"/>
+                    <text x="690" y="105" fill="#f0f6fc" text-anchor="middle" font-size="14" font-weight="bold">受信端末 B</text>
+
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#30363d" />
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+        </section>
+
+        <!-- 3-Minute Guide -->
+        <section id="guide" class="container">
+            <h2 style="text-align: center;">3分でわかるSFLN導入ガイド</h2>
+            <div class="guide-grid">
+                <div class="guide-step fade-in-element">
+                    <span class="step-number">1</span>
+                    <h3>ダウンロード</h3>
+                    <p>PCまたはスマホにアプリをインストール。設定不要で、起動した瞬間から準備完了です。</p>
+                </div>
+                <div class="guide-step fade-in-element">
+                    <span class="step-number">2</span>
+                    <h3>自動セキュリティ設定</h3>
+                    <p>12,000桁のマスターキーが自動生成され、OSの安全な領域に保存されます。あなたは何も覚える必要はありません。</p>
+                </div>
+                <div class="guide-step fade-in-element">
+                    <span class="step-number">3</span>
+                    <h3>セキュア通信開始</h3>
+                    <p>QRコードやリンクを相手に送るだけ。瞬時に世界最高峰の暗号化メッシュネットワークに接続されます。</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="about" class="container">
+            <h2>SFLNとは？</h2>
+            <p>SFLN (Secure Fast Locking Network) は、次世代のインターネットを実現するために設計された、全く新しい通信規格です。我々は「セキュリティ」「速度」「安定性」の三つの原則を極限まで追求し、誰もが安全かつ快適に情報をやり取りできる世界を目指します。</p>
+            <div class="performance-goals">
+                <div class="goal fade-in-element">
+                    <h3>転送速度</h3>
+                    <p>60GBのデータを1分以内に</p>
+                </div>
+                <div class="goal fade-in-element">
+                    <h3>通信速度</h3>
+                    <p>1GB/s (常時安定)</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="features">
+            <div class="container">
+                <h2>コア機能</h2>
+                <div class="features-grid">
+                    <article class="feature-card fade-in-element">
+                        <h3>【A】独自の暗号化とデータ分割</h3>
+                        <p>12,000桁の独自暗号と1kbずつのデータ分割により、傍受を原理的に不可能にします。復号キーはデータ片にランダムで同梱され、究極の安全性を実現します。</p>
+                    </article>
+                    <article class="feature-card fade-in-element">
+                        <h3>【B】自己増殖型メッシュネットワーク</h3>
+                        <p>デバイス同士がP2Pで自律的に接続し、網の目状のネットワークを形成。安全でないデバイスを自動排除し、常にクリーンなネットワークを維持します。</p>
+                    </article>
+                    <article class="feature-card fade-in-element">
+                        <h3>【C】AIによる動的経路最適化</h3>
+                        <p>各デバイスのエッジAIが混雑状況や移動予測を学習し、常に最速・最適な通信ルートをリアルタイムで選択します。</p>
+                    </article>
+                    <article class="feature-card fade-in-element">
+                        <h3>【D】量子コンピュータ耐性暗号</h3>
+                        <p>標準の量子耐性暗号と独自アルゴリズムのハイブリッド方式を採用。未来の脅威からもあなたのデータを守ります。</p>
+                    </article>
+                    <article class="feature-card fade-in-element">
+                        <h3>【E】コンテキストベース認証</h3>
+                        <p>場所、時間、利用履歴といった「状況」をAIが分析し、パスワードレスのシームレスな自動認証を実現します。</p>
+                    </article>
+                    <article class="feature-card fade-in-element">
+                        <h3>【F】超低消費電力設計</h3>
+                        <p>独自の省エネ技術により、既存のデバイスでもバッテリー消費を最小限に。パフォーマンスとエコを両立します。</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section id="download" class="container">
+            <h2>ダウンロード</h2>
+            <p>最新のビルド済みパッケージをダウンロードできます。常に最新のセキュリティが適用されます。</p>
+
+            <div style="margin-top: 20px;">
+                <h4>デスクトップ (GUI)</h4>
+                <div class="download-links">
+                    <a href="client-apps/v-current/SFLN-Client-windows-latest.exe" id="download-windows" class="download-button">Windows版 (.exe)</a>
+                    <a href="client-apps/v-current/SFLN-Client-ubuntu-latest" id="download-linux" class="download-button">Linux版 (Binary)</a>
+                    <a href="client-apps/v-current/SFLN-Client-macos-latest" id="download-macos" class="download-button">macOS版 (Binary)</a>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <h4>サーバー (CLI最適化版)</h4>
+                <div class="download-links">
+                    <a href="client-apps/v-current/SFLN-Server-windows-latest-CUI.exe" id="download-win-server" class="download-button">Windows Server版</a>
+                    <a href="client-apps/v-current/SFLN-Server-ubuntu-latest-CUI" id="download-linux-server" class="download-button">Linux Server版</a>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <h4>モバイル</h4>
+                <div class="download-links">
+                    <a href="client-apps/v-current/SFLN-Android-Bundle.apk" id="download-android" class="download-button">Android版 (APK)</a>
+                </div>
+            </div>
+
+            <p style="margin-top: 30px; font-size: 0.8em; color: var(--secondary-text-color);">
+                ※ 自動ビルドシステムにより、常に最新の2バージョンが維持されます。
+                リンクが古い場合は、再度ページを読み込んでください。
+            </p>
+        </section>
+
+        <section id="news" class="container">
+            <h2>ニュース</h2>
+            <div class="news-list">
+                <article>
+                    <time datetime="2025-10-24">2025.10.24</time>
+                    <p>マルチプラットフォーム自動ビルド・公開システムを稼働開始しました。</p>
+                </article>
+                <article>
+                    <time datetime="2025-09-15">2025.09.15</time>
+                    <p>SFLN公式サイトを公開しました。</p>
+                </article>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 SFLN Project. Management and Supervisory Officer PDG Development
+                <br>
+               Chief Administrative Officer: PDG Group AdminAll Rights Reserved.
+            </p>
+        </div>
+    </footer>
+
+    <script src="js/script.js"></script>
+</body>
+</html>

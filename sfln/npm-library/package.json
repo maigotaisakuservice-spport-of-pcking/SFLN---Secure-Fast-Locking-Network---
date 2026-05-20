@@ -1,0 +1,28 @@
+{
+  "name": "@sfln/library",
+  "version": "2.2.1",
+  "description": "SFLN-P v2.2 (Secure Fast Locking Network) JavaScript SDK. P2P Mesh connectivity with 40,000-bit encryption and smart routing.",
+  "main": "sfln.js",
+  "type": "commonjs",
+  "exports": {
+    ".": "./sfln.js",
+    "./easy": "./sfln-easy.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maigotaisakuservice-spport-of-pcking/SFLN---Secure-Fast-Locking-Network---"
+  },
+  "keywords": [
+    "sfln",
+    "p2p",
+    "encryption",
+    "mesh",
+    "vpn",
+    "secure-transfer"
+  ],
+  "author": "TekipakiPC",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
